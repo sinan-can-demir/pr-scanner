@@ -42,7 +42,7 @@ class Finding:
     def fingerprint(self) -> str:
         """Stable content-based identity, used to bind suppressions (FR-11)."""
         raw = "\x1f".join([self.rule_id, self.file, str(self.line), self.evidence])
-        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+        return hashlib.sha256(raw.encode("utf-8", "surrogatepass")).hexdigest()
 
 
 @dataclass(frozen=True)
