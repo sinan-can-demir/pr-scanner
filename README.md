@@ -16,6 +16,8 @@ Adversarial performance tests (slow, run in CI): `.venv/bin/python -m pytest -m 
 5. **Fail loudly.** A scanner error is never a silent pass.
 
 ## Documentation map
+See also [Progress log](docs/PROGRESS.md) for current status, known gaps and next steps, and the [Rule catalog](docs/rules.md).
+
 | Doc | Purpose |
 |---|---|
 | [00 Vision & scope](docs/00-vision-and-scope.md) | Why, goals, non-goals, success metrics |
