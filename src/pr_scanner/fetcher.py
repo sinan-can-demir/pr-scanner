@@ -20,7 +20,7 @@ from typing import Any, Protocol
 from .classify import FileKind, classify
 from .diff_parser import DiffParseError, parse_unified_diff
 from .github_client import FetchError, HttpResponse
-from .models import Diff
+from .models import ChangedFile, Diff
 
 _REPO = re.compile(r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$")
 _SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
@@ -41,6 +41,8 @@ class FetchLimits:
     max_metadata_bytes: int = 4 * 1024 * 1024
     max_content_bytes: int = 1024 * 1024  # per workflow file read for context
     max_content_files: int = 50
+    max_pages: int = 30  # fallback listing: 100 files per page
+    max_page_bytes: int = 32 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -99,17 +101,24 @@ def fetch_pull_request(
     base_sha, head_sha = _sha(meta, "base"), _sha(meta, "head")
     expected_files = meta.get("changed_files")
 
-    diff_text = client.get(
-        f"/repos/{repo}/compare/{base_sha}...{head_sha}", accept=_DIFF, max_bytes=limits.max_diff_bytes
-    ).body.decode("utf-8", "replace")
-    try:
-        diff = parse_unified_diff(
-            diff_text, head_sha=head_sha, base_sha=base_sha, max_input_bytes=limits.max_diff_bytes
-        )
-    except DiffParseError as exc:
-        raise FetchError(f"diff could not be parsed: {_safe_text(str(exc))}") from None
-
     notes: list[str] = []
+    try:
+        diff_text = client.get(
+            f"/repos/{repo}/compare/{base_sha}...{head_sha}", accept=_DIFF, max_bytes=limits.max_diff_bytes
+        ).body.decode("utf-8", "replace")
+    except FetchError as exc:
+        if exc.rate_limited or not _too_large(exc):
+            raise
+        diff, fallback_notes = _diff_from_file_pages(client, repo, base_sha, head_sha, limits)
+        notes.extend(fallback_notes)
+    else:
+        try:
+            diff = parse_unified_diff(
+                diff_text, head_sha=head_sha, base_sha=base_sha, max_input_bytes=limits.max_diff_bytes
+            )
+        except DiffParseError as exc:
+            raise FetchError(f"diff could not be parsed: {_safe_text(str(exc))}") from None
+
     if isinstance(expected_files, int) and not isinstance(expected_files, bool):
         if len(diff.files) != expected_files:
             notes.append(
@@ -121,6 +130,90 @@ def fetch_pull_request(
     diff, content_notes = _attach_workflow_contents(client, diff, head_repo, head_sha, limits)
     notes.extend(content_notes)
     return FetchResult(diff=diff, incomplete=bool(notes), notes=tuple(notes))
+
+
+def _too_large(exc: FetchError) -> bool:
+    """GitHub refuses huge diffs with 406/413/422; our own byte cap reports a 2xx status."""
+    st = exc.status
+    return st in (406, 413, 422) or (st is not None and 200 <= st < 300)
+
+
+_STATUS = {"added": "added", "removed": "removed", "modified": "modified", "renamed": "renamed", "copied": "added"}
+_PLACEHOLDER = "diff --git a/f b/f\n--- a/f\n+++ b/f\n"
+
+
+def _file_from_item(item: Any, head_sha: str, base_sha: str) -> tuple[ChangedFile | None, bool]:
+    """Build a ChangedFile from one compare ``files`` entry. Returns (file, usable).
+
+    The attacker-controlled filename is never spliced into diff text: the patch is parsed under a
+    fixed placeholder header and the real path is attached afterwards.
+    """
+    if not isinstance(item, dict):
+        return None, False
+    name, status, patch = item.get("filename"), item.get("status"), item.get("patch")
+    prev = item.get("previous_filename")
+    if not isinstance(name, str) or not name or not isinstance(status, str):
+        return None, False
+    mapped = _STATUS.get(status, "modified")
+    old_path = prev if mapped == "renamed" and isinstance(prev, str) and prev else None
+    bare = ChangedFile(path=name, status=mapped, old_path=old_path)
+    if not isinstance(patch, str):
+        # A pure rename legitimately has no patch; anything else is binary or too large to show.
+        return bare, mapped == "renamed"
+    try:
+        parsed = parse_unified_diff(_PLACEHOLDER + patch + "\n", head_sha=head_sha, base_sha=base_sha)
+    except DiffParseError:
+        return bare, False
+    if len(parsed.files) != 1:
+        return bare, False
+    return replace(parsed.files[0], path=name, status=mapped, old_path=old_path), True
+
+
+def _diff_from_file_pages(
+    client: _Client, repo: str, base_sha: str, head_sha: str, limits: FetchLimits
+) -> tuple[Diff, list[str]]:
+    """Fallback for PRs whose combined diff GitHub will not serve. Still pinned to the SHAs.
+
+    Returned notes are only reasons the result is incomplete; a clean fallback returns none."""
+    files: list[ChangedFile] = []
+    unusable = 0
+    patch_bytes = 0
+    notes: list[str] = []
+    exhausted = True
+    for page_no in range(1, limits.max_pages + 1):
+        data = _json_object(
+            client.get(
+                f"/repos/{repo}/compare/{base_sha}...{head_sha}",
+                accept=_JSON,
+                params={"per_page": "100", "page": str(page_no)},
+                max_bytes=limits.max_page_bytes,
+            ),
+            "compare page",
+        )
+        items = data.get("files")
+        if not isinstance(items, list):
+            raise FetchError("compare page: unexpected response shape")
+        for item in items:
+            patch = item.get("patch") if isinstance(item, dict) else None
+            if isinstance(patch, str):
+                patch_bytes += len(patch.encode("utf-8", "replace"))
+            cf, usable = _file_from_item(item, head_sha, base_sha)
+            if cf is not None:
+                files.append(cf)
+            if not usable:
+                unusable += 1
+        if patch_bytes > limits.max_diff_bytes:
+            notes.append("patch size limit reached; remaining files not read")
+            exhausted = False
+            break
+        if len(items) < 100:
+            exhausted = False
+            break
+    if exhausted:
+        notes.append(f"file listing stopped at the limit of {limits.max_pages} pages")
+    if unusable:
+        notes.append(f"{unusable} file(s) had no usable patch (binary, too large or malformed)")
+    return Diff(head_sha=head_sha, base_sha=base_sha, files=tuple(files)), notes
 
 
 def _head_repo(meta: dict[str, Any]) -> str | None:

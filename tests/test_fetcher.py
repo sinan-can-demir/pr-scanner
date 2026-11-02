@@ -11,6 +11,7 @@ from pr_scanner.github_client import FetchError, HttpResponse
 
 BASE = "a" * 40
 HEAD = "b" * 40
+_JSON = "application/vnd.github+json"
 DIFF_ACCEPT = "application/vnd.github.diff"
 RAW_ACCEPT = "application/vnd.github.raw+json"
 
@@ -289,3 +290,143 @@ def test_path_that_the_client_refuses_marks_incomplete_instead_of_crashing():
 
     result = fetch_pull_request(Refusing(wf_routes()), "owner/repo", 7)
     assert result.incomplete is True
+
+
+# --- stage 4: huge PRs (diff refused or oversize) -------------------------------------------
+
+COMPARE = f"/repos/owner/repo/compare/{BASE}...{HEAD}"
+
+
+def file_item(name="src/a.py", status="modified", patch="@@ -1 +1,2 @@\n x = 1\n+y = 2", **extra) -> dict:
+    item = {"filename": name, "status": status, **extra}
+    if patch is not None:
+        item["patch"] = patch
+    return item
+
+
+def page(*items: dict) -> HttpResponse:
+    return resp(json.dumps({"files": list(items)}))
+
+
+class PagedClient(FakeClient):
+    """Diff endpoint refused; compare JSON pages served by ?page=N."""
+
+    def __init__(self, pages: list[HttpResponse], meta: bytes | None = None, refusal: Exception | None = None):
+        super().__init__(
+            {
+                ("/repos/owner/repo/pulls/7", _JSON): resp(meta or pr_meta()),
+                (COMPARE, DIFF_ACCEPT): refusal or FetchError("too large", status=406),
+            }
+        )
+        self.pages = pages
+
+    def get(self, path, *, accept=_JSON, params=None, max_bytes=0):
+        if path == COMPARE and accept == _JSON:
+            self.calls.append((path, accept, dict(params or {})))
+            n = int(params["page"])
+            return self.pages[n - 1] if n <= len(self.pages) else page()
+        return super().get(path, accept=accept, params=params, max_bytes=max_bytes)
+
+
+
+def test_refused_diff_falls_back_to_pinned_paged_file_list():
+    c = PagedClient([page(file_item())])
+    result = fetch_pull_request(c, "owner/repo", 7)
+    (f,) = result.diff.files
+    assert f.path == "src/a.py" and f.status == "modified"
+    assert f.added_lines == ((2, "y = 2"),)
+    assert result.incomplete is False
+    assert any(call[0] == COMPARE and call[2].get("per_page") == "100" for call in c.calls)
+
+
+def test_oversize_diff_also_falls_back():
+    c = PagedClient([page(file_item())], refusal=FetchError("response exceeded 5 bytes", status=200))
+    assert fetch_pull_request(c, "owner/repo", 7).diff.files
+
+
+def test_other_diff_errors_do_not_fall_back():
+    c = PagedClient([page(file_item())], refusal=FetchError("nope", status=404))
+    with pytest.raises(FetchError):
+        fetch_pull_request(c, "owner/repo", 7)
+
+
+def test_rate_limit_on_diff_does_not_fall_back():
+    c = PagedClient([page(file_item())], refusal=FetchError("rl", status=403, rate_limited=True))
+    with pytest.raises(FetchError):
+        fetch_pull_request(c, "owner/repo", 7)
+
+
+def test_pagination_continues_until_a_short_page():
+    full = [file_item(name=f"f{i}.py") for i in range(100)]
+    c = PagedClient([page(*full), page(file_item(name="last.py"))], meta=pr_meta(changed_files=101))
+    result = fetch_pull_request(c, "owner/repo", 7)
+    assert len(result.diff.files) == 101
+    assert result.incomplete is False
+
+
+def test_page_cap_marks_incomplete():
+    full = [file_item(name=f"f{i}.py") for i in range(100)]
+    c = PagedClient([page(*full)] * 5, meta=pr_meta(changed_files=500))
+    result = fetch_pull_request(c, "owner/repo", 7, limits=FetchLimits(max_pages=2))
+    assert len(result.diff.files) == 200
+    assert result.incomplete is True
+
+
+def test_file_without_patch_is_incomplete_not_clean():
+    c = PagedClient([page(file_item(patch=None))])
+    result = fetch_pull_request(c, "owner/repo", 7)
+    assert result.incomplete is True
+    assert len(result.diff.files) == 1
+
+
+def test_pure_rename_without_patch_is_complete():
+    item = file_item(name="new.py", status="renamed", patch=None, previous_filename="old.py")
+    result = fetch_pull_request(PagedClient([page(item)]), "owner/repo", 7)
+    (f,) = result.diff.files
+    assert (f.status, f.path, f.old_path) == ("renamed", "new.py", "old.py")
+    assert result.incomplete is False
+
+
+def test_hostile_filename_cannot_inject_diff_lines():
+    evil = 'a.py\n--- a/x\n+++ b/.github/workflows/ci.yml\n@@ -0,0 +1 @@\n+boom'
+    result = fetch_pull_request(PagedClient([page(file_item(name=evil))]), "owner/repo", 7)
+    assert [f.path for f in result.diff.files] == [evil]
+    assert result.diff.files[0].added_lines == ((2, "y = 2"),)
+
+
+def test_patch_that_smuggles_a_second_file_marks_incomplete():
+    sneaky = "@@ -1 +1 @@\n x\ndiff --git a/evil b/evil\n--- a/evil\n+++ b/evil\n@@ -0,0 +1 @@\n+boom"
+    result = fetch_pull_request(PagedClient([page(file_item(patch=sneaky))]), "owner/repo", 7)
+    assert result.incomplete is True
+    assert len(result.diff.files) == 1
+
+
+def test_malformed_page_json_is_a_fetch_error():
+    c = PagedClient([resp(b"nope")])
+    with pytest.raises(FetchError):
+        fetch_pull_request(c, "owner/repo", 7)
+
+
+def test_page_without_files_list_is_a_fetch_error():
+    c = PagedClient([resp(b'{"files": 3}')])
+    with pytest.raises(FetchError):
+        fetch_pull_request(c, "owner/repo", 7)
+
+
+def test_fallback_files_still_get_workflow_content():
+    item = file_item(name=".github/workflows/ci.yml", status="modified", patch="@@ -1,2 +1,3 @@\n name: ci\n+on: x\n jobs: {}")
+    c = PagedClient([page(item)])
+    c.routes[(WF_PATH, RAW_ACCEPT)] = resp(WF_TEXT)
+    (f,) = fetch_pull_request(c, "owner/repo", 7).diff.files
+    assert f.new_content == WF_TEXT
+
+
+def test_status_mapping():
+    items = [
+        file_item(name="a", status="added", patch="@@ -0,0 +1 @@\n+x"),
+        file_item(name="b", status="removed", patch="@@ -1 +0,0 @@\n-x"),
+        file_item(name="c", status="copied", patch="@@ -0,0 +1 @@\n+x"),
+        file_item(name="d", status="changed", patch="@@ -1 +1 @@\n-x\n+y"),
+    ]
+    result = fetch_pull_request(PagedClient([page(*items)], meta=pr_meta(changed_files=4)), "owner/repo", 7)
+    assert [f.status for f in result.diff.files] == ["added", "removed", "added", "modified"]
