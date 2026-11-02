@@ -25,6 +25,8 @@ Severity: C = Critical, H = High, M = Medium, L = Low. "Mitigation" refs point t
 | T-D12 | Scanner / policy disablement | Edits to scanner config, workflow, CODEOWNERS, branch protection files | C | FR-12 |
 | T-D13 | Time-bomb / conditional payload | Date/host/CI-env-conditioned execution | M | FR-06, FR-08 |
 | T-D15 | Sock-puppet endorsement / reviewer pressure | Author disputes a valid review concern; a newly created or low-history account appears to vouch for the author or approve the PR; coordinated comments, near-identical wording, similar timing. *Origin: real incident reported by project owner.* | H | FR-17, FR-18 |
+| T-D16 | Remote binary dropper | Added code downloads a binary from a remote server and executes it (`urlretrieve`/`https.get`/`curl` plus `subprocess`/`child_process`/`exec.Command`/`chmod +x`); often from a raw IP. *Origin: real incident reported by project owner (approximate description, to be refined).* | C | FR-20 |
+| T-D17 | CI-aware conditional execution | Code reads `CI`/`GITHUB_ACTIONS`/etc. and stays dormant under CI so automated checks see nothing, acting only on real machines. *Origin: same incident.* Static diff analysis is not fooled because the code is never run. | H | FR-20, FR-21 |
 | T-D14 | Split payload across PRs or files | Benign fragments reassembled later | M | Out of scope v1; noted for roadmap (needs history analysis) |
 
 ### Attack tree: "Run attacker code in maintainers' or users' environment via a PR"

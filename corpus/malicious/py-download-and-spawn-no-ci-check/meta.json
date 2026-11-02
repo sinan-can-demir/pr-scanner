@@ -1,0 +1,8 @@
+{
+  "description": "downloads and runs a binary without any CI gating",
+  "threat": "T-D16",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER"
+  ]
+}

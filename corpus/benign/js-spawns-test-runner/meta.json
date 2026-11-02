@@ -1,0 +1,7 @@
+{
+  "description": "spawns a local test runner, no download",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "EXEC-DROPPER"
+  ]
+}

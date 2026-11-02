@@ -129,6 +129,18 @@ def test_oversize_diff_is_incomplete():
     assert r.incomplete and r.verdict.outcome == Outcome.INCOMPLETE
 
 
+def test_oversized_line_is_incomplete_not_silently_skipped():
+    r = engine(FlagWord(), limits=Limits(max_line_chars=1000)).scan(diff(cf(text="evil" + "x" * 5000)), Policy())
+    assert r.incomplete
+    # the first max_line_chars characters are still scanned
+    assert len(r.findings) == 1 and r.verdict.outcome == Outcome.BLOCK
+
+
+def test_oversized_line_alone_is_incomplete_verdict():
+    r = engine(FlagWord(), limits=Limits(max_line_chars=1000)).scan(diff(cf(text="x" * 5000)), Policy())
+    assert r.verdict.outcome == Outcome.INCOMPLETE
+
+
 def test_time_budget_exceeded_is_incomplete():
     ticks = iter([0.0, 0.0, 100.0, 100.0, 100.0, 100.0])
     r = engine(FlagWord(), Crashes(), limits=Limits(max_seconds=5), clock=lambda: next(ticks)).scan(

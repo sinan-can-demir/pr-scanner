@@ -1,0 +1,11 @@
+diff --git a/src/demo/api.py b/src/demo/api.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/src/demo/api.py
+@@ -0,0 +1,5 @@
++import requests
++
++
++def fetch_items():
++    return requests.get("https://api.example.invalid/items", timeout=10).json()

@@ -1,0 +1,8 @@
+{
+  "description": "fetches the binary from a raw IP address",
+  "threat": "T-D16",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER"
+  ]
+}

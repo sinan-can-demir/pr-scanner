@@ -1,0 +1,8 @@
+{
+  "description": "same pattern in JavaScript",
+  "threat": "T-D17",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER"
+  ]
+}

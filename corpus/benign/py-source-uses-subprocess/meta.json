@@ -1,5 +1,7 @@
 {
   "description": "normal source file using subprocess is outside the setup.py rule",
   "expect_outcome": "pass",
-  "covers_rules": []
+  "covers_rules": [
+    "EXEC-DROPPER"
+  ]
 }

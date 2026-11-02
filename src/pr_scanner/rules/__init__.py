@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from .dropper import RemoteBinaryExec
 from .hooks import NpmLifecycleHook, PyBuildBackend, PySetupHook
 from .registry import Registry
 
-ALL_RULES = (NpmLifecycleHook, PySetupHook, PyBuildBackend)
+ALL_RULES = (NpmLifecycleHook, PySetupHook, PyBuildBackend, RemoteBinaryExec)
 
 
 def default_registry() -> Registry:

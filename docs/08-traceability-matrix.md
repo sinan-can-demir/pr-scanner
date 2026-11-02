@@ -23,6 +23,8 @@ Test types: U unit, P property, C corpus, I integration, A adversarial, F fuzz, 
 | FR-17 | UC-01 | T-D11 | U |
 | FR-18 | UC-01, UC-02 | T-D15, T-S14 | U, C (incident-modelled thread fixture) |
 | FR-19 | UC-02, UC-03 | T-S14, T-S07 | U, I |
+| FR-20 | UC-01 | T-D16, T-D17 | U, C (7 malicious + 5 benign fixtures), A |
+| FR-21 | UC-01 | T-D17 | U, C |
 | NFR-01 | UC-01 | T-S04 | S, review |
 | NFR-02 | UC-01 | T-S03 | Perf |
 | NFR-03 | UC-01, UC-05 | T-S12 | C (gate) |

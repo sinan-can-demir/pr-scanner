@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import re
 
-MAX_SCAN_CHARS = 4000  # per line; longer lines are truncated before matching
+MAX_SCAN_CHARS = 1_000_000  # matches Limits.max_line_chars; the engine truncates longer lines and marks the scan incomplete.
+# Do NOT lower this: truncating short lets an attacker hide a payload behind padding.
 EVIDENCE_CHARS = 200
 
 

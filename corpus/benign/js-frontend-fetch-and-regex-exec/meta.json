@@ -1,0 +1,7 @@
+{
+  "description": "regex.exec() is not a process spawn; fetch is a normal browser call",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "EXEC-DROPPER"
+  ]
+}

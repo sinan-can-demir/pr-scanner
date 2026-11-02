@@ -61,7 +61,7 @@ def test_corpus_contains_no_live_indicators(cases):
     """Fixtures must stay defanged: only reserved domains / documentation IP ranges."""
     import re
 
-    allowed_host = re.compile(r"example\.invalid|localhost")
+    allowed_host = re.compile(r"example\.invalid|localhost|203\.0\.113\.\d+")
     for c in cases:
         for host in re.findall(r"https?://([^/\s\"'|)]+)", c.patch):
             assert allowed_host.search(host), f"{c.name}: non-defanged host {host}"

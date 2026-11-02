@@ -1,0 +1,8 @@
+{
+  "description": "skips itself under CI, otherwise downloads, chmods and spawns a binary",
+  "threat": "T-D17",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER"
+  ]
+}

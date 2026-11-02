@@ -1,0 +1,7 @@
+{
+  "description": "reads CI to disable colors",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "EXEC-DROPPER"
+  ]
+}

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 
 from .models import Diff, Finding
@@ -16,6 +16,7 @@ class Limits:
     max_files: int = 1000
     max_added_bytes: int = 5 * 1024 * 1024
     max_seconds: float = 60.0
+    max_line_chars: int = 1_000_000  # longer lines are truncated and the scan is marked incomplete
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,8 @@ class Engine:
         if len(files) > self._limits.max_files:
             files = files[: self._limits.max_files]
             incomplete = True
+        files, long_line = self._truncate_lines(files)
+        incomplete = incomplete or long_line
         scoped = Diff(head_sha=diff.head_sha, base_sha=diff.base_sha, files=files)
         if scoped.total_added_bytes > self._limits.max_added_bytes:
             incomplete = True
@@ -83,6 +86,16 @@ class Engine:
             verdict=verdict,
             rule_versions=versions,
         )
+
+    def _truncate_lines(self, files):
+        """Cap very long lines (T-S03) but never silently: report so the verdict is INCOMPLETE."""
+        limit, hit, out = self._limits.max_line_chars, False, []
+        for f in files:
+            if any(len(t) > limit for _, t in f.added_lines):
+                hit = True
+                f = replace(f, added_lines=tuple((n, t[:limit]) for n, t in f.added_lines))
+            out.append(f)
+        return tuple(out), hit
 
     def _truncate_bytes(self, diff: Diff) -> Diff:
         """Keep whole files, in path order, until the byte budget is spent."""

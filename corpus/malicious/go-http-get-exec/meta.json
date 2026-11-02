@@ -1,0 +1,8 @@
+{
+  "description": "Go dropper",
+  "threat": "T-D16",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER"
+  ]
+}

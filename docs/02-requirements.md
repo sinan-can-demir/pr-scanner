@@ -23,6 +23,8 @@ Priority uses MoSCoW (M = Must, S = Should, C = Could). Each requirement has acc
 | FR-16 | M | A new rule is accepted only with at least one malicious and one benign fixture | CI check fails otherwise |
 | FR-17 | C | Author-risk signals (account age, first contribution, sudden workflow edits) feed severity | Signals boost, never solely trigger, a block |
 | FR-18 | S | Flag suspicious PR-thread behaviour: new or low-history accounts commenting, approving or reacting on a PR that has open findings, and coordinated patterns between author and those accounts | Thread fixture modelled on the reported incident yields a "possible sock-puppet" notice to maintainers; the notice never changes the rule-based verdict and is worded as a signal, not an accusation |
+| FR-20 | M | Detect remote binary droppers: within one file's added lines, remote download combined with process execution or `chmod +x`; escalate when CI-gated or when the source is a raw IP | Fixtures in several languages (Python, JS, Go, shell) flagged; download-only, spawn-only, CI-read-only and `regex.exec` cases are not |
+| FR-21 | S | Surface CI-environment-conditional behaviour (reads of `CI`, `GITHUB_ACTIONS`, ...) when combined with spawning or downloading | CI-gated spawn without download yields warn; CI read alone yields nothing |
 | FR-19 | M | A finding cannot be cleared by comments, reactions or approvals alone; only a recorded suppression (FR-11) or a code change that removes the cause clears it | Test: approval by a new account leaves the verdict unchanged |
 
 ## Non-functional requirements

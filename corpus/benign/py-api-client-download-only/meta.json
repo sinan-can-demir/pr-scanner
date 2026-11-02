@@ -1,0 +1,7 @@
+{
+  "description": "plain HTTP client with no process execution",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "EXEC-DROPPER"
+  ]
+}

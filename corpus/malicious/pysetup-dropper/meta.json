@@ -1,0 +1,9 @@
+{
+  "description": "dropper inside setup.py: both HOOK-PYSETUP and EXEC-DROPPER should fire",
+  "threat": "T-D16",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER",
+    "HOOK-PYSETUP"
+  ]
+}

