@@ -1,0 +1,8 @@
+{
+  "description": "reads .npmrc and sends it to a raw IP over netcat",
+  "threat": "T-D07",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "HOOK-NPM"
+  ]
+}

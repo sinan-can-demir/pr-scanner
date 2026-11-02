@@ -7,7 +7,7 @@ Test types: U unit, P property, C corpus, I integration, A adversarial, F fuzz, 
 | FR-01 | UC-01 | T-S08 | I (event fixtures), U |
 | FR-02 | UC-01 | T-S04 | S, I |
 | FR-03 | UC-01, UC-05 | n/a | U, I |
-| FR-04 | UC-01 | T-D01 | U, C, A |
+| FR-04 | UC-01 | T-D01 | U, C, A (implemented: HOOK-NPM, HOOK-PYSETUP, HOOK-PYBACKEND; see rules.md) |
 | FR-05 | UC-01 | T-D03, T-D08, T-D12 | U, C, A |
 | FR-06 | UC-01 | T-D02, T-D09, T-D10, T-D13 | U, C, A, F |
 | FR-07 | UC-01 | T-D04, T-D05, T-D06 | U, C |

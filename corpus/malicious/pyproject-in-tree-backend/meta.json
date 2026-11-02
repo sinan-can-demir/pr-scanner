@@ -1,0 +1,8 @@
+{
+  "description": "in-tree backend added so repository code runs at build time",
+  "threat": "T-D01",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "HOOK-PYBACKEND"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "description": "native addon build",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "HOOK-NPM"
+  ]
+}

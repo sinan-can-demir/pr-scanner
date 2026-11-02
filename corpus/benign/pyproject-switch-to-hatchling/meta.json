@@ -1,0 +1,7 @@
+{
+  "description": "migration to a well-known backend",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "HOOK-PYBACKEND"
+  ]
+}

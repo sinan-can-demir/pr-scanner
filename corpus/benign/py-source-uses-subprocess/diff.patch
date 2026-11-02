@@ -1,0 +1,11 @@
+diff --git a/src/demo/tools.py b/src/demo/tools.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/src/demo/tools.py
+@@ -0,0 +1,5 @@
++import subprocess
++
++
++def git_sha():
++    return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()

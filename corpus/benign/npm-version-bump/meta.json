@@ -1,0 +1,7 @@
+{
+  "description": "version bump only",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "HOOK-NPM"
+  ]
+}

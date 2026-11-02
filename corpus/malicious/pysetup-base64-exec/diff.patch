@@ -1,0 +1,12 @@
+diff --git a/setup.py b/setup.py
+index 1111111..2222222 100644
+--- a/setup.py
++++ b/setup.py
+@@ -1,4 +1,7 @@
++import base64
+ from setuptools import setup
++
++exec(base64.b64decode("cHJpbnQoJ2RlZmFuZ2VkJyk="))
+ 
+ setup(
+     name="demo-lib",

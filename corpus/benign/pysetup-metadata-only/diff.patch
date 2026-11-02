@@ -1,0 +1,13 @@
+diff --git a/setup.py b/setup.py
+index 1111111..2222222 100644
+--- a/setup.py
++++ b/setup.py
+@@ -2,6 +2,7 @@
+ 
+ setup(
+     name="demo-lib",
+-    version="1.2.0",
++    version="1.2.1",
+     packages=["demo"],
++    description="A demo library",
+ )

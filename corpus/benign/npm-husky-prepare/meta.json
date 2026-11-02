@@ -1,0 +1,7 @@
+{
+  "description": "adds the ubiquitous husky git-hooks installer",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "HOOK-NPM"
+  ]
+}

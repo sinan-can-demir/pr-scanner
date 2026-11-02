@@ -1,0 +1,21 @@
+diff --git a/package.json b/package.json
+index 1111111..2222222 100644
+--- a/package.json
++++ b/package.json
+@@ -3,6 +3,7 @@
+   "version": "1.2.0",
+   "main": "index.js",
+   "scripts": {
+-    "test": "jest"
++    "test": "jest",
++    "postinstall": "node scripts/setup.js"
+   }
+ }
+diff --git a/scripts/setup.js b/scripts/setup.js
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/scripts/setup.js
+@@ -0,0 +1,2 @@
++// defanged placeholder for an added install-time script
++console.log('setup');

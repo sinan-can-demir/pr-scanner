@@ -1,0 +1,7 @@
+{
+  "description": "a dependency literally named 'install'",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "HOOK-NPM"
+  ]
+}

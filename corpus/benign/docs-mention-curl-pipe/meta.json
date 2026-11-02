@@ -1,0 +1,5 @@
+{
+  "description": "documentation text that mentions an install one-liner",
+  "expect_outcome": "pass",
+  "covers_rules": []
+}

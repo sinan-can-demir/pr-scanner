@@ -1,0 +1,8 @@
+{
+  "description": "build backend swapped for an unknown package",
+  "threat": "T-D01",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "HOOK-PYBACKEND"
+  ]
+}

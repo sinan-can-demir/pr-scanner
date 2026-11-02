@@ -1,0 +1,7 @@
+{
+  "description": "non-lifecycle script may use curl against localhost",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "HOOK-NPM"
+  ]
+}

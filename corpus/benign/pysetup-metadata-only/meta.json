@@ -1,0 +1,7 @@
+{
+  "description": "setup.py metadata edits",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "HOOK-PYSETUP"
+  ]
+}

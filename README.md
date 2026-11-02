@@ -2,9 +2,10 @@
 
 A GitHub App / Action that statically scans pull requests for signs of malicious code (supply-chain attacks, CI tampering, obfuscated payloads, credential exfiltration) and reports an explainable verdict on the PR.
 
-**Status:** Phase 1 in progress. Done: domain models, verdict policy, fail-safe rule engine, hardened unified-diff parser, path classifier. Next: first detection rules (install hooks, CI workflows). No detection rules exist yet.
+**Status:** Phase 1 in progress. Done: domain models, verdict policy, fail-safe rule engine, hardened unified-diff parser, path classifier, install-hook rules ([catalog](docs/rules.md)), corpus runner with a small starter corpus. Next: CI-workflow rules (FR-05), then obfuscation and dependency rules.
 
 Development: `python3 -m venv .venv && .venv/bin/pip install -e '.[dev]' && .venv/bin/python -m pytest`
+Corpus metrics: `.venv/bin/python -m pr_scanner.corpus corpus`
 
 ## Principles
 1. **Never execute PR code.** Analysis is static, on the diff only (ADR-0004).

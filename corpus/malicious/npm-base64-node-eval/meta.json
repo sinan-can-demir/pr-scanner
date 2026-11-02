@@ -1,0 +1,8 @@
+{
+  "description": "inline node eval of a base64 blob (decodes to a harmless console.log)",
+  "threat": "T-D02",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "HOOK-NPM"
+  ]
+}

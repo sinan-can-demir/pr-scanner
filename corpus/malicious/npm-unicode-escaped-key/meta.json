@@ -1,0 +1,8 @@
+{
+  "description": "hook key written with a JSON unicode escape to dodge naive grep",
+  "threat": "T-D01",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "HOOK-NPM"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "description": "prebuilt binary with compile fallback (|| is logical OR, not a pipe)",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "HOOK-NPM"
+  ]
+}
