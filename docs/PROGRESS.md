@@ -1,5 +1,9 @@
 # Progress log
 
+## Session 2: GitHub fetcher
+
+Added `GitHubClient` (GET-only, token only in the Authorization header and redacted from repr/errors, no redirects, byte-capped reads, bounded retries, rate limits fail closed, remote error text sanitised) and `fetch_pull_request` (PR metadata, then diff by immutable `base...head` SHAs, fills `new_content` for CI workflows from the head repo, falls back to the paged compare file listing for huge PRs without ever splicing attacker filenames into diff text). Tests: 345 default (+75), including a fetcher-to-engine test showing workflow context lifts `CI-PRT` from Medium to Critical.
+
 ## Session 1: 2026-11-02
 
 ### Where we are
@@ -15,7 +19,8 @@ Phase 0 (documentation foundation) is complete. Phase 1 (rule engine and first r
 | Rules | 10 rules (see `docs/rules.md`) |
 | Corpus | 27 malicious (all detected), 27 benign (0 blocked, 5 warned by design) |
 | Tests | 270 default + 22 slow performance tests (`pytest -m perf`) |
-| GitHub fetcher, reporter, Action wrapper | **Not started** |
+| GitHub fetcher | Done (session 2): `github_client.py`, `fetcher.py`; tested with fakes and a local server, **never run against real GitHub** |
+| Reporter, Action wrapper | **Not started** |
 
 ### Rules implemented
 `HOOK-NPM`, `HOOK-PYSETUP`, `HOOK-PYBACKEND` (install hooks, FR-04) | `EXEC-DROPPER` (remote binary dropper, CI-aware, FR-20/21) | `CI-PRT`, `CI-UNPINNED`, `CI-PERMS`, `CI-SECRETS`, `CI-PIPE-SH`, `CI-INJECT` (CI workflows, FR-05).
@@ -32,7 +37,9 @@ A real attack the owner stopped shaped two additions (descriptions are approxima
 4. A fingerprint crash on lone surrogate characters.
 
 ### Known gaps and risks
-- **Fetcher missing.** Workflow rules need `ChangedFile.new_content` (file at PR head, read via API only). Without it `CI-PRT` degrades to Medium.
+- **Fetcher unverified against the real API.** Tests use fakes and a local HTTP server. Assumptions to confirm against live GitHub: compare endpoint honours `page`/`per_page` and the `application/vnd.github.diff` media type; the head repo of a fork PR serves the head SHA via the contents API; refusal status codes for huge diffs (406/413/422). Record real responses as fixtures once a token is available.
+- **`FetchResult.incomplete` is not yet wired into the engine.** The fetcher reports it, but `Engine.scan` only knows its own limits; the caller (Action wrapper) must pass it into the verdict so an incomplete fetch can never pass.
+- **Fetcher residual risks:** reading is pinned to SHAs, but the PR base can move after metadata is read (diff is still self-consistent); no ETag/caching; rate-limit failures abort the scan rather than waiting.
 - **Corpus bias.** The corpus was written together with the rules, so 100% recall is a sanity check, not evidence. Need real defanged samples, an independently written adversarial set, and a larger sample of real benign PRs before trusting the metrics in `docs/00`.
 - **Dropper blind spots.** Signals in different files are not correlated; dynamic lookups (`getattr`, string building) are not seen; legitimate prebuilt-binary installers (esbuild/puppeteer style) will block until suppressed.
 - **Time budget is not preemptive** (checked between rules only). A hard per-rule timeout in a worker is planned for Phase 2 (T-S03).
@@ -41,7 +48,7 @@ A real attack the owner stopped shaped two additions (descriptions are approxima
 - Success-metric targets in `docs/00` are provisional; set them from a measured baseline.
 
 ### Suggested next steps (in order)
-1. **GitHub fetcher** (read-only token, API only, fill `new_content`, handle truncated responses and huge PRs), tested against recorded fixtures.
+1. ~~GitHub fetcher~~ done; next small step: wire `FetchResult.incomplete` into `Engine.scan` / the verdict.
 2. Reporter: check run, annotations, escaping of attacker-controlled text.
 3. GitHub Action wrapper (`pull_request`, least privilege, separate privileged reporting job; pin by SHA).
 4. Dropper cross-file correlation.

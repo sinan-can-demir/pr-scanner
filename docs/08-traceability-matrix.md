@@ -5,7 +5,7 @@ Test types: U unit, P property, C corpus, I integration, A adversarial, F fuzz, 
 | Requirement | Use cases | Threats addressed | Planned tests |
 |---|---|---|---|
 | FR-01 | UC-01 | T-S08 | I (event fixtures), U |
-| FR-02 | UC-01 | T-S04 | S, I |
+| FR-02 | UC-01 | T-S04 | S, I (tests/test_github_client.py, test_fetcher.py, test_fetcher_engine.py) |
 | FR-03 | UC-01, UC-05 | n/a | U, I |
 | FR-04 | UC-01 | T-D01 | U, C, A (implemented: HOOK-NPM, HOOK-PYSETUP, HOOK-PYBACKEND; see rules.md) |
 | FR-05 | UC-01 | T-D03, T-D07, T-D08 | U, C, A, Perf (implemented: CI-PRT, CI-UNPINNED, CI-PERMS, CI-SECRETS, CI-PIPE-SH, CI-INJECT; T-D12 scanner-config tampering is still open) |

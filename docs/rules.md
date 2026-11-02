@@ -63,7 +63,7 @@ Known limits:
 ## CI workflow rules (FR-05)
 **Primer:** a GitHub Actions workflow runs on GitHub's machines, often with secrets and a write-capable token, so a PR that edits a workflow can be more dangerous than one that edits source code. These rules read only *added* lines, ignore comments, and only treat the repository-root `.github/` as real (a nested `vendor/.github/workflows/` is not executed by GitHub).
 
-**Context from the fetcher.** Some decisions depend on lines the diff does not show, e.g. whether an existing workflow is triggered by `pull_request_target`. The fetcher (not yet built) must read the file at the head SHA through the API and set `ChangedFile.new_content` (inert text only, ADR-0004). Without it the rules degrade to a lower severity instead of guessing.
+**Context from the fetcher.** Some decisions depend on lines the diff does not show, e.g. whether an existing workflow is triggered by `pull_request_target`. The fetcher (`src/pr_scanner/fetcher.py`) reads the file at the head SHA through the API and set `ChangedFile.new_content` (inert text only, ADR-0004). Without it the rules degrade to a lower severity instead of guessing.
 
 | Rule | Severity | When |
 |---|---|---|

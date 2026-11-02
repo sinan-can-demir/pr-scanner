@@ -34,7 +34,7 @@ flowchart TB
 | Component | Responsibility | Key requirements |
 |---|---|---|
 | Event Ingress | Validate event/signature, map to ScanRequest | FR-01, T-S08 |
-| Diff Fetcher | Pull diff and metadata via API; enforce size limits | FR-02, NFR-06 |
+| Diff Fetcher | Pull diff and metadata via API (`github_client.py`, `fetcher.py`); diff requested by immutable base...head SHAs; enforce size limits; incomplete results are flagged, never empty | FR-02, NFR-06 |
 | Normaliser | Decode, strip/flag Unicode tricks, classify file type, extract added lines | T-D09, T-S01 |
 | Rule Engine | Run rules in isolation with per-rule timeout; collect Findings | FR-03, NFR-07 |
 | Rule pack | Rules grouped by domain: hooks, ci, obfuscation, deps, exfil | FR-04..08 |
