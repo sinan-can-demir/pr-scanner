@@ -1,0 +1,7 @@
+{
+  "description": "a publish step passing its token through env",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "CI-SECRETS"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "description": "pull_request_target used for labelling only, no PR code is checked out; warn so a human confirms",
+  "expect_outcome": "warn",
+  "covers_rules": [
+    "CI-PERMS",
+    "CI-PRT"
+  ]
+}

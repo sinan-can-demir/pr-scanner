@@ -8,6 +8,9 @@
 5. Run the corpus metrics; recall/precision gates must hold (NFR-03).
 6. Update `docs/08-traceability-matrix.md`.
 
+## Performance
+Rules run on attacker-controlled text. Avoid regexes with unbounded repetition after a repeated token (`.*`, lazy `[^x]*?`), and do not restart a regex at every quote or bracket. Add a hostile payload to `tests/test_rules_perf.py` for any new pattern shape, and run `pytest -m perf`. Do not "fix" slowness by truncating lines: a payload hidden behind padding must still be found.
+
 ## Ground rules
 - No code path may execute or import PR-supplied data (ADR-0004).
 - Pin dependencies and Actions by hash/SHA.

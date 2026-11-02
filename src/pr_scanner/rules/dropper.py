@@ -39,7 +39,7 @@ _DOWNLOAD = re.compile(
     r"|\bNet::HTTP\b|\bURI\.open\b|\bopen-uri\b"
 )
 _CHMOD = re.compile(
-    r"\bchmod\s+(?:\+x|u\+x|a\+x|[0-7]*[1357][0-7]{0,2}\b)|\bos\.chmod\s*\(.*\b0o?[0-7]*[1357]\b"
+    r"\bchmod\s+(?:\+x|u\+x|a\+x|[0-7]*[1357][0-7]{0,2}\b)|\bos\.chmod\s*\([^\n]{0,80}?\b0o?[0-7]*[1357]\b"
     r"|\bchmodSync\s*\(|\bfs\.chmod\s*\(|\bos\.Chmod\s*\(|\bS_IXUSR\b|\bsetExecutable\s*\("
 )
 _CI = re.compile(

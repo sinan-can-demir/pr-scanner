@@ -112,3 +112,36 @@ def test_unknown_label_directory_is_rejected(tmp_path):
     (tmp_path / "weird" / "c").mkdir(parents=True)
     with pytest.raises(CorpusError):
         load_cases(tmp_path)
+
+
+WF_PATCH = """\
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -5,3 +5,4 @@
+     steps:
+       - uses: actions/checkout@v4
++        with: { ref: "${{ github.event.pull_request.head.sha }}" }
+       - run: npm test
+"""
+WF_HEAD = (
+    "on: pull_request_target\njobs:\n  t:\n    steps:\n      - uses: actions/checkout@v4\n"
+    "        with: { ref: \"${{ github.event.pull_request.head.sha }}\" }\n      - run: npm test\n"
+)
+
+
+def test_head_directory_supplies_full_file_content(tmp_path, engine):
+    # the trigger is not in the diff; only the head/ copy of the file reveals it
+    case(tmp_path, "malicious", "prt", WF_PATCH, threat="T-D03", expect_outcome="block", expect_rules=["CI-PRT"])
+    head = tmp_path / "malicious" / "prt" / "head" / ".github" / "workflows"
+    head.mkdir(parents=True)
+    (head / "ci.yml").write_text(WF_HEAD)
+    (c,) = load_cases(tmp_path)
+    assert c.head_files == {".github/workflows/ci.yml": WF_HEAD}
+    assert run_corpus([c], engine, Policy()).malicious_detected == 1
+
+
+def test_without_head_content_the_same_diff_is_only_a_medium_warning(tmp_path, engine):
+    case(tmp_path, "benign", "prt-no-head", WF_PATCH, expect_outcome="warn")
+    report = run_corpus(load_cases(tmp_path), engine, Policy())
+    assert report.results[0].outcome == "warn"

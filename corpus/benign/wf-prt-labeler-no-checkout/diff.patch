@@ -1,0 +1,15 @@
+diff --git a/.github/workflows/label.yml b/.github/workflows/label.yml
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/.github/workflows/label.yml
+@@ -0,0 +1,9 @@
++name: label
++on: pull_request_target
++jobs:
++  label:
++    runs-on: ubuntu-latest
++    permissions:
++      pull-requests: write
++    steps:
++      - uses: actions/labeler@0123456789abcdef0123456789abcdef01234567

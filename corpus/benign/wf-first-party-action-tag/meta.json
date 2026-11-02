@@ -1,0 +1,7 @@
+{
+  "description": "first-party actions by tag are reported at Low only",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "CI-UNPINNED"
+  ]
+}

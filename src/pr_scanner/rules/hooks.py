@@ -14,7 +14,7 @@ from typing import Sequence
 
 from ..models import Diff, Finding, Severity
 from .base import Rule
-from ._patterns import MAX_SCAN_CHARS, cap, evidence, suspicious_reasons
+from ._patterns import cap, evidence, json_string_pairs, suspicious_reasons
 
 
 def _basename(path: str) -> str:
@@ -22,9 +22,6 @@ def _basename(path: str) -> str:
 
 
 # ------------------------------------------------------------------ npm hooks
-
-_JSTR = r'"(?:[^"\\]|\\.)*"'
-_PAIR = re.compile(rf"({_JSTR})\s*:\s*({_JSTR})")
 
 INSTALL_TIME_HOOKS = {"preinstall", "install", "postinstall"}  # run for every dependent
 OTHER_HOOKS = {"prepare", "preprepare", "postprepare", "prepublish"}  # git installs / local installs
@@ -89,8 +86,8 @@ class NpmLifecycleHook(Rule):
                 continue
             pkg_dir = posixpath.dirname(f.path)
             for line_no, raw in f.added_lines:
-                for m in _PAIR.finditer(cap(raw)):
-                    key, cmd = _decode_json_string(m.group(1)), _decode_json_string(m.group(2))
+                for key_tok, val_tok in json_string_pairs(cap(raw)):
+                    key, cmd = _decode_json_string(key_tok), _decode_json_string(val_tok)
                     if key not in _HOOKS or cmd is None:
                         continue
                     if _SEMVER_STRICT.fullmatch(cmd.strip()):

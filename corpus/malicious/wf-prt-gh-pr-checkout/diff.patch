@@ -1,0 +1,19 @@
+diff --git a/.github/workflows/pr-test.yml b/.github/workflows/pr-test.yml
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/.github/workflows/pr-test.yml
+@@ -0,0 +1,13 @@
++name: pr-test
++on:
++  pull_request_target:
++    types: [opened, synchronize]
++jobs:
++  test:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
++      - run: gh pr checkout ${{ github.event.number }}
++        env:
++          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
++      - run: make test

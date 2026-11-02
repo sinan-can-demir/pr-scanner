@@ -1,0 +1,11 @@
+diff --git a/.github/workflows/pr-check.yml b/.github/workflows/pr-check.yml
+index 1111111..2222222 100644
+--- a/.github/workflows/pr-check.yml
++++ b/.github/workflows/pr-check.yml
+@@ -5,4 +5,6 @@
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
++        with:
++          ref: ${{ github.event.pull_request.head.sha }}
+       - run: ./scripts/lint.sh

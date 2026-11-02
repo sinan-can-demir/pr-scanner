@@ -1,0 +1,8 @@
+{
+  "description": "pull_request_target workflow that fetches the PR branch with the gh CLI and runs its Makefile",
+  "threat": "T-D03",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "CI-PRT"
+  ]
+}

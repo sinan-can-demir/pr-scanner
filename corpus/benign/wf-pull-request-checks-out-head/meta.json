@@ -1,0 +1,7 @@
+{
+  "description": "checking out the PR head is fine under the plain pull_request trigger (no secrets for forks)",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "CI-PRT"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "description": "serialises every secret, base64-encodes it (defeats log masking) and uploads it",
+  "threat": "T-D07",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "CI-SECRETS"
+  ]
+}

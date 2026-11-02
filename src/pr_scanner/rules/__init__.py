@@ -5,8 +5,27 @@ from __future__ import annotations
 from .dropper import RemoteBinaryExec
 from .hooks import NpmLifecycleHook, PyBuildBackend, PySetupHook
 from .registry import Registry
+from .workflows import (
+    ActionPinning,
+    PermissionsWidening,
+    PipeToShell,
+    PullRequestTargetCheckout,
+    ScriptInjection,
+    SecretExposure,
+)
 
-ALL_RULES = (NpmLifecycleHook, PySetupHook, PyBuildBackend, RemoteBinaryExec)
+ALL_RULES = (
+    NpmLifecycleHook,
+    PySetupHook,
+    PyBuildBackend,
+    RemoteBinaryExec,
+    PullRequestTargetCheckout,
+    ActionPinning,
+    PermissionsWidening,
+    SecretExposure,
+    PipeToShell,
+    ScriptInjection,
+)
 
 
 def default_registry() -> Registry:

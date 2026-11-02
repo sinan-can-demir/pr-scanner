@@ -1,0 +1,8 @@
+{
+  "description": "third-party action referenced by a branch the owner (or an attacker) can change at any time",
+  "threat": "T-D03",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "CI-UNPINNED"
+  ]
+}

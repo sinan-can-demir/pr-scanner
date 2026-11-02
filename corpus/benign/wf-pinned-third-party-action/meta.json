@@ -1,0 +1,7 @@
+{
+  "description": "third-party action pinned to a full SHA",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "CI-UNPINNED"
+  ]
+}

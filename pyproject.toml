@@ -17,3 +17,5 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["perf: slow adversarial-input performance tests (run in CI with: pytest -m perf)"]
+addopts = "-m 'not perf'"

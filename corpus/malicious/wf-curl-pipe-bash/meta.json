@@ -1,0 +1,8 @@
+{
+  "description": "remote script piped straight into bash",
+  "threat": "T-D08",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "CI-PIPE-SH"
+  ]
+}

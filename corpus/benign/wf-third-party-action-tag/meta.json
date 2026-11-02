@@ -1,0 +1,7 @@
+{
+  "description": "unpinned tag on a third-party action: not malicious, but should warn",
+  "expect_outcome": "warn",
+  "covers_rules": [
+    "CI-UNPINNED"
+  ]
+}

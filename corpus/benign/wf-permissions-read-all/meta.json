@@ -1,0 +1,7 @@
+{
+  "description": "read-only permissions",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "CI-PERMS"
+  ]
+}

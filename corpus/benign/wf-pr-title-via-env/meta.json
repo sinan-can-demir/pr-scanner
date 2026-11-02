@@ -1,0 +1,7 @@
+{
+  "description": "untrusted value passed through an environment variable: the recommended safe pattern",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "CI-INJECT"
+  ]
+}

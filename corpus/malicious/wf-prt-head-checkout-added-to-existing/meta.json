@@ -1,0 +1,8 @@
+{
+  "description": "a one-line change makes an existing pull_request_target workflow run PR code; the trigger is not in the diff",
+  "threat": "T-D03",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "CI-PRT"
+  ]
+}

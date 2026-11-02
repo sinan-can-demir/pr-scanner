@@ -1,0 +1,10 @@
+name: pr-check
+on: pull_request_target
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - run: ./scripts/lint.sh

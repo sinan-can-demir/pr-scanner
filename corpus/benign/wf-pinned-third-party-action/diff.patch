@@ -1,0 +1,9 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 1111111..2222222 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -15,3 +15,4 @@
+           node-version: 20
+       - run: npm ci
+       - run: npm test
++      - uses: some-org/cool-action@0123456789abcdef0123456789abcdef01234567 # v2.1.0

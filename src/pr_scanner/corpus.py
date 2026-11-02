@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import sys
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from .diff_parser import DiffParseError, parse_unified_diff
@@ -41,6 +41,7 @@ class Case:
     threat: str | None = None
     expect_rules: tuple[str, ...] = ()
     covers_rules: tuple[str, ...] = ()  # benign: rules this is a negative example for (FR-16)
+    head_files: dict[str, str] = field(default_factory=dict)  # path -> full file text at the PR head
 
 
 @dataclass(frozen=True)
@@ -92,6 +93,16 @@ class Report:
         return [r for r in self.results if not r.ok]
 
 
+def _load_head_files(head: Path) -> dict[str, str]:
+    """Optional ``head/`` tree: full file contents at the PR head (what the real fetcher will supply)."""
+    out: dict[str, str] = {}
+    if head.is_dir():
+        for f in sorted(head.rglob("*")):
+            if f.is_file() and not f.is_symlink():
+                out[f.relative_to(head).as_posix()] = f.read_text(encoding="utf-8")
+    return out
+
+
 def load_cases(root: Path | str) -> list[Case]:
     root = Path(root)
     for child in root.iterdir() if root.exists() else []:
@@ -119,6 +130,7 @@ def load_cases(root: Path | str) -> list[Case]:
             threat, rules = meta.get("threat"), tuple(meta.get("expect_rules", ()))
             if label == "malicious" and (not threat or not rules):
                 raise CorpusError(f"{meta_file}: malicious cases need 'threat' and 'expect_rules'")
+            head_files = _load_head_files(d / "head")
             cases.append(
                 Case(
                     name=d.name,
@@ -129,6 +141,7 @@ def load_cases(root: Path | str) -> list[Case]:
                     threat=threat,
                     expect_rules=rules,
                     covers_rules=tuple(meta.get("covers_rules", ())),
+                    head_files=head_files,
                 )
             )
     return cases
@@ -145,6 +158,10 @@ def run_corpus(cases: list[Case], engine: Engine, policy: Policy) -> Report:
             report.benign_total += c.label == "benign"
             continue
 
+        if c.head_files:
+            diff = replace(diff, files=tuple(
+                replace(f, new_content=c.head_files[f.path]) if f.path in c.head_files else f for f in diff.files
+            ))
         result = engine.scan(diff, policy)
         outcome = result.verdict.outcome
         fired = tuple(sorted({f.rule_id for f in result.findings}))

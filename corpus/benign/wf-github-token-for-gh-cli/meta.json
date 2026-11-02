@@ -1,0 +1,7 @@
+{
+  "description": "the built-in GITHUB_TOKEN is not reported",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "CI-SECRETS"
+  ]
+}

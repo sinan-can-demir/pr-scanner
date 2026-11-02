@@ -19,6 +19,36 @@ def evidence(line: str) -> str:
     return s if len(s) <= EVIDENCE_CHARS else s[:EVIDENCE_CHARS] + "…"
 
 
+_JSON_STRING = re.compile(r'"(?:[^"\\]|\\.)*+"')  # possessive: no backtracking
+_COLON_GAP = re.compile(r"\s*:\s*")
+
+
+def json_string_pairs(s: str) -> list[tuple[str, str]]:
+    """Return (key_token, value_token) for every ``"k" : "v"`` in one linear pass.
+
+    Tokens keep their quotes (decode with json.loads). A regex ``finditer`` for this
+    restarts at every quote and is quadratic on unterminated strings (T-S03), so we
+    tokenise left to right once and stop at the first unterminated string, which
+    could not be valid JSON (and thus not executed by npm) anyway.
+    """
+    tokens: list[tuple[int, int]] = []
+    pos = 0
+    while True:
+        i = s.find('"', pos)
+        if i == -1:
+            break
+        m = _JSON_STRING.match(s, i)
+        if m is None:
+            break
+        tokens.append((m.start(), m.end()))
+        pos = m.end()
+    return [
+        (s[a0:a1], s[b0:b1])
+        for (a0, a1), (b0, b1) in zip(tokens, tokens[1:])
+        if _COLON_GAP.fullmatch(s, a1, b0)
+    ]
+
+
 def normalise_cmd(cmd: str) -> str:
     """Undo cheap shell obfuscation before matching.
 

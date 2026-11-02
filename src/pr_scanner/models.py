@@ -53,6 +53,9 @@ class ChangedFile:
     removed_lines: tuple[tuple[int, str], ...] = ()  # (old-file line number, text)
     old_path: str | None = None  # set for renames
     is_binary: bool = False
+    # Full file text at the PR head, supplied by the fetcher (API read only, never executed) for
+    # files whose meaning depends on context, e.g. CI workflows. None when unavailable.
+    new_content: str | None = None
 
 
 @dataclass(frozen=True)
