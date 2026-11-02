@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
+from .classify import FileKind, classify
 from .diff_parser import DiffParseError, parse_unified_diff
 from .github_client import FetchError, HttpResponse
 from .models import Diff
@@ -25,6 +26,7 @@ _REPO = re.compile(r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$")
 _SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 _DIFF = "application/vnd.github.diff"
 _JSON = "application/vnd.github+json"
+_RAW = "application/vnd.github.raw+json"
 
 
 class _Client(Protocol):
@@ -37,6 +39,8 @@ class _Client(Protocol):
 class FetchLimits:
     max_diff_bytes: int = 64 * 1024 * 1024
     max_metadata_bytes: int = 4 * 1024 * 1024
+    max_content_bytes: int = 1024 * 1024  # per workflow file read for context
+    max_content_files: int = 50
 
 
 @dataclass(frozen=True)
@@ -112,4 +116,64 @@ def fetch_pull_request(
                 f"file count mismatch: GitHub reports {expected_files} changed file(s), "
                 f"diff contains {len(diff.files)} file(s)"
             )
+
+    head_repo = _head_repo(meta)
+    diff, content_notes = _attach_workflow_contents(client, diff, head_repo, head_sha, limits)
+    notes.extend(content_notes)
     return FetchResult(diff=diff, incomplete=bool(notes), notes=tuple(notes))
+
+
+def _head_repo(meta: dict[str, Any]) -> str | None:
+    """Full name of the repository holding the head commit (a fork for fork PRs)."""
+    head = meta.get("head")
+    repo = head.get("repo") if isinstance(head, dict) else None
+    name = repo.get("full_name") if isinstance(repo, dict) else None
+    if isinstance(name, str) and _REPO.match(name) and not any(p in {".", ".."} for p in name.split("/")):
+        return name
+    return None
+
+
+def _attach_workflow_contents(
+    client: _Client, diff: Diff, head_repo: str | None, head_sha: str, limits: FetchLimits
+) -> tuple[Diff, list[str]]:
+    """Fill ``new_content`` for CI files whose meaning depends on lines the diff does not show.
+
+    Notes deliberately omit file paths: they are attacker-controlled and notes are shown to users.
+    """
+    wanted = [
+        i
+        for i, f in enumerate(diff.files)
+        if classify(f.path) is FileKind.CI_WORKFLOW and f.status != "removed" and not f.is_binary
+    ]
+    if not wanted:
+        return diff, []
+    if head_repo is None:
+        return diff, [f"head repository unavailable; context for {len(wanted)} workflow file(s) not read"]
+
+    files = list(diff.files)
+    failed = 0
+    skipped = max(0, len(wanted) - limits.max_content_files)
+    for i in wanted[: limits.max_content_files]:
+        try:
+            resp = client.get(
+                f"/repos/{head_repo}/contents/{files[i].path}",
+                accept=_RAW,
+                params={"ref": head_sha},
+                max_bytes=limits.max_content_bytes,
+            )
+        except FetchError as exc:
+            if exc.rate_limited:
+                raise
+            failed += 1
+            continue
+        except ValueError:  # the client refused the path
+            failed += 1
+            continue
+        files[i] = replace(files[i], new_content=resp.body.decode("utf-8", "replace"))
+
+    notes: list[str] = []
+    if failed:
+        notes.append(f"could not read {failed} workflow file(s) at the head commit")
+    if skipped:
+        notes.append(f"{skipped} workflow file(s) not read: limit of {limits.max_content_files} reached")
+    return Diff(head_sha=diff.head_sha, base_sha=diff.base_sha, files=tuple(files)), notes

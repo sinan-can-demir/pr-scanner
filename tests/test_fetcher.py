@@ -167,3 +167,125 @@ def test_parse_error_message_does_not_carry_control_characters():
         fetch_pull_request(client, "owner/repo", 7)
     msg = str(ei.value)
     assert "\x1b" not in msg and "\n" not in msg and len(msg) < 300
+
+
+# --- stage 3: new_content for CI workflows --------------------------------------------------
+
+WF_DIFF = """\
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 1111111..2222222 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -1,2 +1,3 @@
+ name: ci
++on: pull_request_target
+ jobs: {}
+"""
+WF_DELETED = """\
+diff --git a/.github/workflows/old.yml b/.github/workflows/old.yml
+deleted file mode 100644
+index 1111111..0000000
+--- a/.github/workflows/old.yml
++++ /dev/null
+@@ -1,1 +0,0 @@
+-name: old
+"""
+WF_PATH = "/repos/fork/repo/contents/.github/workflows/ci.yml"
+WF_TEXT = "name: ci\non: pull_request_target\njobs: {}\n"
+
+
+def wf_routes(diff: str = WF_DIFF, content: object = None, meta: bytes | None = None) -> dict:
+    r = routes_for(diff=diff, meta=meta)
+    r[(WF_PATH, RAW_ACCEPT)] = content if content is not None else resp(WF_TEXT)
+    return r
+
+
+def test_workflow_new_content_is_read_from_head_repo_at_head_sha():
+    client = FakeClient(wf_routes())
+    result = fetch_pull_request(client, "owner/repo", 7)
+    (f,) = result.diff.files
+    assert f.new_content == WF_TEXT
+    assert result.incomplete is False
+    path, accept, params = client.calls[-1]
+    assert path == WF_PATH and accept == RAW_ACCEPT and params == {"ref": HEAD}
+
+
+def test_non_workflow_files_are_not_fetched():
+    client = FakeClient(routes_for())
+    result = fetch_pull_request(client, "owner/repo", 7)
+    assert result.diff.files[0].new_content is None
+    assert len(client.calls) == 2
+
+
+def test_removed_workflow_is_not_fetched():
+    client = FakeClient(routes_for(diff=WF_DELETED))
+    result = fetch_pull_request(client, "owner/repo", 7)
+    assert result.diff.files[0].new_content is None
+    assert result.incomplete is False
+
+
+def test_missing_head_repo_marks_incomplete():
+    client = FakeClient(routes_for(diff=WF_DIFF, meta=pr_meta(head_repo=None)))
+    result = fetch_pull_request(client, "owner/repo", 7)
+    assert result.diff.files[0].new_content is None
+    assert result.incomplete is True and result.notes
+
+
+def test_unreadable_workflow_marks_incomplete_without_leaking_path():
+    client = FakeClient(wf_routes(content=FetchError("gone", status=404)))
+    result = fetch_pull_request(client, "owner/repo", 7)
+    assert result.diff.files[0].new_content is None
+    assert result.incomplete is True
+    assert all("workflows" not in n and "ci.yml" not in n for n in result.notes)
+
+
+def test_rate_limit_while_reading_content_propagates():
+    err = FetchError("limit", status=403, rate_limited=True)
+    with pytest.raises(FetchError):
+        fetch_pull_request(FakeClient(wf_routes(content=err)), "owner/repo", 7)
+
+
+def test_oversize_content_limit_is_passed_and_failure_marks_incomplete():
+    seen = {}
+
+    class Spy(FakeClient):
+        def get(self, path, *, accept="", params=None, max_bytes=0):
+            seen[path] = max_bytes
+            return super().get(path, accept=accept, params=params, max_bytes=max_bytes)
+
+    c = Spy(wf_routes(content=FetchError("response exceeded 99 bytes")))
+    result = fetch_pull_request(c, "owner/repo", 7, limits=FetchLimits(max_content_bytes=99))
+    assert seen[WF_PATH] == 99
+    assert result.incomplete is True
+
+
+def test_invalid_utf8_content_is_decoded_leniently():
+    client = FakeClient(wf_routes(content=resp(b"name: ci\n\xff\xfe on: x\n")))
+    (f,) = fetch_pull_request(client, "owner/repo", 7).diff.files
+    assert f.new_content is not None and f.new_content.startswith("name: ci")
+
+
+def test_workflow_fetch_count_is_capped():
+    many = "".join(
+        f"diff --git a/.github/workflows/w{i}.yml b/.github/workflows/w{i}.yml\n"
+        f"--- a/.github/workflows/w{i}.yml\n+++ b/.github/workflows/w{i}.yml\n@@ -1 +1,2 @@\n a: 1\n+b: 2\n"
+        for i in range(5)
+    )
+    r = routes_for(diff=many, meta=pr_meta(changed_files=5))
+    for i in range(2):
+        r[(f"/repos/fork/repo/contents/.github/workflows/w{i}.yml", RAW_ACCEPT)] = resp("a: 1\nb: 2\n")
+    result = fetch_pull_request(FakeClient(r), "owner/repo", 7, limits=FetchLimits(max_content_files=2))
+    got = [f for f in result.diff.files if f.new_content is not None]
+    assert len(got) == 2
+    assert result.incomplete is True
+
+
+def test_path_that_the_client_refuses_marks_incomplete_instead_of_crashing():
+    class Refusing(FakeClient):
+        def get(self, path, **kw):
+            if "contents" in path:
+                raise ValueError("invalid API path")
+            return super().get(path, **kw)
+
+    result = fetch_pull_request(Refusing(wf_routes()), "owner/repo", 7)
+    assert result.incomplete is True
