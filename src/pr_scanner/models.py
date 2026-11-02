@@ -49,8 +49,10 @@ class Finding:
 class ChangedFile:
     path: str
     status: str  # added | modified | removed | renamed
-    added_lines: tuple[tuple[int, str], ...] = ()  # (line number, text)
-    removed_lines: tuple[tuple[int, str], ...] = ()
+    added_lines: tuple[tuple[int, str], ...] = ()  # (new-file line number, text)
+    removed_lines: tuple[tuple[int, str], ...] = ()  # (old-file line number, text)
+    old_path: str | None = None  # set for renames
+    is_binary: bool = False
 
 
 @dataclass(frozen=True)
