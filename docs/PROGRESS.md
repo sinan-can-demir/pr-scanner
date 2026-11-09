@@ -1,5 +1,9 @@
 # Progress log
 
+## Session 3: reporter and incomplete-fetch wiring
+
+`Engine.scan(..., input_incomplete=fetched.notes)` makes a partial fetch INCOMPLETE. `reporter.build_report` renders verdict, findings and annotations with all PR-derived text escaped (code spans with adaptive fences, hidden/bidi characters shown as markers, no mentions/links/references, no forged headings), caps annotations at 50 and the summary at 65535 bytes, and says when anything was omitted. Tests: 480 default (+135), including a hypothesis property test over arbitrary text.
+
 ## Session 2: GitHub fetcher
 
 Added `GitHubClient` (GET-only, token only in the Authorization header and redacted from repr/errors, no redirects, byte-capped reads, bounded retries, rate limits fail closed, remote error text sanitised) and `fetch_pull_request` (PR metadata, then diff by immutable `base...head` SHAs, fills `new_content` for CI workflows from the head repo, falls back to the paged compare file listing for huge PRs without ever splicing attacker filenames into diff text). Tests: 345 default (+75), including a fetcher-to-engine test showing workflow context lifts `CI-PRT` from Medium to Critical.
@@ -20,7 +24,8 @@ Phase 0 (documentation foundation) is complete. Phase 1 (rule engine and first r
 | Corpus | 27 malicious (all detected), 27 benign (0 blocked, 5 warned by design) |
 | Tests | 270 default + 22 slow performance tests (`pytest -m perf`) |
 | GitHub fetcher | Done (session 2): `github_client.py`, `fetcher.py`; tested with fakes and a local server, **never run against real GitHub** |
-| Reporter, Action wrapper | **Not started** |
+| Reporter | Done (session 3): `reporter.py`, pure `build_report(ScanResult)` to check-run payload; **never posted to GitHub yet** |
+| Action wrapper | **Not started** |
 
 ### Rules implemented
 `HOOK-NPM`, `HOOK-PYSETUP`, `HOOK-PYBACKEND` (install hooks, FR-04) | `EXEC-DROPPER` (remote binary dropper, CI-aware, FR-20/21) | `CI-PRT`, `CI-UNPINNED`, `CI-PERMS`, `CI-SECRETS`, `CI-PIPE-SH`, `CI-INJECT` (CI workflows, FR-05).
@@ -44,12 +49,13 @@ A real attack the owner stopped shaped two additions (descriptions are approxima
 - **Dropper blind spots.** Signals in different files are not correlated; dynamic lookups (`getattr`, string building) are not seen; legitimate prebuilt-binary installers (esbuild/puppeteer style) will block until suppressed.
 - **Time budget is not preemptive** (checked between rules only). A hard per-rule timeout in a worker is planned for Phase 2 (T-S03).
 - **CI must run `pytest -m perf`**; it is excluded from the default run because it takes about 2 minutes.
-- Findings contain attacker-controlled text. The reporter must escape it before posting to GitHub.
+- Reporter escaping (code spans, `⟦U+XXXX⟧` markers for hidden characters, `@ # :// www. GH-n` neutralised) is tested against my model of GitHub's Markdown, not the real renderer. **Verify once with a real check run on a throwaway repo** (mentions, autolinks, `#123`, bidi text).
+- Conclusions: WARN is `neutral` (passes required checks), INCOMPLETE is `action_required`, BLOCK/ERROR are `failure`. The owner should confirm WARN and INCOMPLETE mapping.
 - Success-metric targets in `docs/00` are provisional; set them from a measured baseline.
 
 ### Suggested next steps (in order)
 1. ~~GitHub fetcher~~ done; ~~wire `FetchResult.incomplete` into the engine~~ done.
-2. Reporter: check run, annotations, escaping of attacker-controlled text.
+2. ~~Reporter~~ done (payload only). Still to do: the API call that posts it (`POST /check-runs`, batching annotations 50 at a time, needs `checks: write` in the privileged job).
 3. GitHub Action wrapper (`pull_request`, least privilege, separate privileged reporting job; pin by SHA).
 4. Dropper cross-file correlation.
 5. Obfuscation rules (FR-06) and dependency rules (FR-07); scanner-config tampering (T-D12 / FR-12).
