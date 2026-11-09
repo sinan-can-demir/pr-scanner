@@ -49,7 +49,7 @@ A real attack the owner stopped shaped two additions (descriptions are approxima
 - **Dropper blind spots.** Signals in different files are not correlated; dynamic lookups (`getattr`, string building) are not seen; legitimate prebuilt-binary installers (esbuild/puppeteer style) will block until suppressed.
 - **Time budget is not preemptive** (checked between rules only). A hard per-rule timeout in a worker is planned for Phase 2 (T-S03).
 - **CI must run `pytest -m perf`**; it is excluded from the default run because it takes about 2 minutes.
-- Reporter escaping (code spans, `⟦U+XXXX⟧` markers for hidden characters, `@ # :// www. GH-n` neutralised) is tested against my model of GitHub's Markdown, not the real renderer. **Verify once with a real check run on a throwaway repo** (mentions, autolinks, `#123`, bidi text).
+- Reporter escaping was checked against GitHub's real renderer (`POST /markdown`, gfm mode, 2026-11-09) with every hostile string in every field: output used only `code h2 li p strong ul`; zero links, images, mentions, tables, quotes, raw HTML or hidden characters. A positive control (unescaped text) did link mentions and URLs, so the detector works. **Not verified:** `#123` and commit-SHA references (this endpoint does not link them even unescaped, so it proves nothing about them), and the real check-run path (annotation rendering, size limits). Creating a check run needs a GitHub App token; the CLI's OAuth token cannot.
 - Conclusions: WARN is `neutral` (passes required checks), INCOMPLETE is `action_required`, BLOCK/ERROR are `failure`. The owner should confirm WARN and INCOMPLETE mapping.
 - Success-metric targets in `docs/00` are provisional; set them from a measured baseline.
 
