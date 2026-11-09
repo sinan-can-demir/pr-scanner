@@ -1,0 +1,8 @@
+{
+  "description": "replaces the scanner's own scan step with a hand-written report.json (real diff from the rehearsal on 2026-11-09, PR #4)",
+  "threat": "T-D12",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "SCANNER-TAMPER"
+  ]
+}

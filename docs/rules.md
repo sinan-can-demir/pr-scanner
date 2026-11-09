@@ -87,6 +87,21 @@ Known limits:
 
 Known limits: line-based, so values split over several lines (YAML folded scalars) are missed; the key under `permissions:` is not verified to be in a `permissions` block; removed restrictions (deleting a `permissions:` block) are not yet reported; GitLab/CircleCI/Jenkins files only get `CI-PIPE-SH`; expression functions that rebuild a tainted value (`format(...)`) are not tracked.
 
+## SCANNER-TAMPER (FR-12, T-D12)
+**Primer:** the scan workflow runs from the base branch, so a pull request cannot disable it *before* it merges. But a change that is merged becomes the new base, so a PR that rewrites the scanner's own workflow, policy or ownership file has to be caught as a change and held for an owner. Found in the 2026-11-09 rehearsal (PR #4 scanned clean while replacing the scan step with a hand-written `report.json`); that exact diff is now a corpus case.
+
+"The scanner" means: a root `.github/workflows/` file whose name contains `pr-scan`/`pr_scan` or that calls `pr_scanner`/`pr-scanner` on a non-comment line; `.pr-scanner.yml|yaml`; and `CODEOWNERS`.
+
+| Severity | Condition |
+|---|---|
+| Critical | scanner workflow deleted, or renamed out of `.github/workflows/`; the number of scanner calls goes down |
+| High | a line that writes `report.json` by hand (`>`, `tee`, `cp`, `mv`, `dd`, `install`, `curl`, `open(`, ...); scanner installed from a non-https or non-github.com URL, from a different repository than before, without a full commit SHA, or from a package index; scanner workflow renamed to another workflow name; `.pr-scanner.yml` changed or deleted; `CODEOWNERS` deleted or ownership of `.github`/workflows/the scanner removed |
+| Medium | any other change to the scanner workflow (including a legitimate pin bump) or to `CODEOWNERS` |
+
+Comments and blank lines never count. One finding per reason per file. Evidence for removals uses the old-file line number.
+
+Known limits: removing one of several scanner calls in a legitimate refactor reads as Critical (a person decides); a report written through an unusual tool is not seen; a PR cannot be told apart from a real maintainer, so every legitimate change to these files warns until a suppression flow (FR-11) exists, and this only helps if CODEOWNERS plus branch protection require an owner to approve those paths. Changes to the scanner's own source code inside a repository that vendors it are out of scope.
+
 ## Performance
 Every rule must stay linear on adversarial lines (T-S03). `tests/test_rules_perf.py` feeds 22 hostile payloads (repeated tokens, unterminated strings/expressions, padding) through every rule in a child process with a hard timeout. Writing it found five super-linear patterns in earlier rules (a lazy `.*` after a repeated token, regex restarts on unterminated JSON strings and `${{` expressions); they were replaced with single-pass algorithms (`json_string_pairs`, `_expressions`, `_key_then_value`) rather than length bounds, since a bound is itself an evasion. The suite is slow (~2 minutes) so it is marked `perf` and excluded by default; **CI must run `pytest -m perf`**. Measured cost: `EXEC-DROPPER` is the heaviest at roughly 2 s per MB of text; the engine caps a scan at 5 MB.
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from .dropper import RemoteBinaryExec
 from .hooks import NpmLifecycleHook, PyBuildBackend, PySetupHook
 from .registry import Registry
+from .scanner import ScannerTamper
 from .workflows import (
     ActionPinning,
     PermissionsWidening,
@@ -25,6 +26,7 @@ ALL_RULES = (
     SecretExposure,
     PipeToShell,
     ScriptInjection,
+    ScannerTamper,
 )
 
 

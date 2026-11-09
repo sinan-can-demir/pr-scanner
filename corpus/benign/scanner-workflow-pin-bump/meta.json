@@ -1,0 +1,7 @@
+{
+  "description": "maintainer bumps the pinned scanner commit in both jobs: allowed, but held for owner review",
+  "expect_outcome": "warn",
+  "covers_rules": [
+    "SCANNER-TAMPER"
+  ]
+}

@@ -63,7 +63,8 @@ def test_corpus_contains_no_live_indicators(cases):
 
     allowed_host = re.compile(r"example\.invalid|localhost|203\.0\.113\.\d+")
     for c in cases:
-        for host in re.findall(r"https?://([^/\s\"'|)]+)", c.patch):
+        patch = c.patch.replace("https://github.com/sinan-can-demir/pr-scanner@", "")  # the project's own pin
+        for host in re.findall(r"https?://([^/\s\"'|)]+)", patch):
             assert allowed_host.search(host), f"{c.name}: non-defanged host {host}"
-        for ip in re.findall(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", c.patch):
+        for ip in re.findall(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", patch):
             assert ip.startswith("203.0.113."), f"{c.name}: non-documentation IP {ip}"

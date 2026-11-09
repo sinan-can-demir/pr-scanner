@@ -24,9 +24,11 @@
 
 Plumbing confirmed on real runners: venv plus `pip install git+https://...@<sha>`, artifact hand-over, validation, check-run post (created by the `github-actions` app). Each PR also shows two job-level checks, `scan` and `report`; only **"PR scanner"** should be required in branch protection.
 
-**Gap found (PR #4): a PR that tampers with the scanner's own workflow scans clean.** The base workflow still runs, so the PR cannot disable the scan *before* merge, but once merged the tampered workflow becomes the base. This is T-D12 / FR-12, listed as not built. Needs a rule that raises HIGH/CRITICAL for any change to the scanner workflow (and to workflows that invoke `pr_scanner`), plus CODEOWNERS and a branch-protection rule requiring owner review for that path. Rehearsal PRs #2-#4 are still open on the fork.
+**Gap found (PR #4), now closed by `SCANNER-TAMPER` (11 rules, 768 default tests): a PR that tampers with the scanner's own workflow scanned clean.** The base workflow still runs, so the PR cannot disable the scan *before* merge, but once merged the tampered workflow becomes the base. This is T-D12 / FR-12, listed as not built. Rule added (see `docs/rules.md`); it raises HIGH/CRITICAL for any change to the scanner workflow (and to workflows that invoke `pr_scanner`), plus CODEOWNERS and a branch-protection rule requiring owner review for that path. Rehearsal PRs #2-#4 are still open on the fork.
 
 **Not yet exercised:** a PR from another account's fork, a genuinely incomplete scan (huge PR) through Actions, a missing-artifact fallback in Actions, the `report` job running after a crashed `scan`.
+
+**SCANNER-TAMPER (session 3):** built test-first. Corpus gained the real PR #4 diff (malicious, BLOCK) and a pin-bump (benign, WARN). A first draft crashed on a blank added line chosen as evidence (an engine crash becomes an ERROR verdict); blank lines are now ignored and a regression test added. Perf suite (22 payloads) passes with the new rule. Still to do: the fork's pinned scanner SHA predates the rule, so PR #4 there still shows PASS until the pin is bumped and the check re-run; this repo's own CODEOWNERS and branch protection are not set up.
 
 ## Session 2: GitHub fetcher
 
@@ -81,7 +83,7 @@ A real attack the owner stopped shaped two additions (descriptions are approxima
 ### Suggested next steps (in order)
 1. ~~GitHub fetcher~~ done; ~~wire `FetchResult.incomplete` into the engine~~ done.
 2. ~~Reporter~~ done (payload only). Still to do: the API call that posts it (`POST /check-runs`, batching annotations 50 at a time, needs `checks: write` in the privileged job).
-3. GitHub Action wrapper per ADR-0005 (`pull_request_target`, two jobs, untrusted artifact). Done: `report_io`, `scan` command (token from env only, always passes `fetched.notes`, every failure becomes an ERROR report, exit 0 whenever a report is written, 2 for usage problems). Also done: `publisher.py` and the `report` command (symlink/non-regular/oversize files refused, event SHA wins over the file, no blind retry on POST). Workflow done and rehearsed. Next: close the gap below (scanner-workflow tampering rule), then CODEOWNERS and branch-protection guidance, then packaging/releasing the Action for other repos.
+3. GitHub Action wrapper per ADR-0005 (`pull_request_target`, two jobs, untrusted artifact). Done: `report_io`, `scan` command (token from env only, always passes `fetched.notes`, every failure becomes an ERROR report, exit 0 whenever a report is written, 2 for usage problems). Also done: `publisher.py` and the `report` command (symlink/non-regular/oversize files refused, event SHA wins over the file, no blind retry on POST). Workflow done and rehearsed. Next: CODEOWNERS plus branch-protection guidance for this repo (the rule only helps if owners must approve those paths), re-run PR #4 on the fork against the new scanner, then packaging/releasing the Action for other repos.
 4. Dropper cross-file correlation.
 5. Obfuscation rules (FR-06) and dependency rules (FR-07); scanner-config tampering (T-D12 / FR-12).
 6. Sock-puppet signal (FR-18) and suppression flow (FR-11).
