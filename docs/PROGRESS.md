@@ -28,7 +28,7 @@ Plumbing confirmed on real runners: venv plus `pip install git+https://...@<sha>
 
 **Not yet exercised:** a PR from another account's fork, a genuinely incomplete scan (huge PR) through Actions, a missing-artifact fallback in Actions, the `report` job running after a crashed `scan`.
 
-**SCANNER-TAMPER (session 3):** built test-first. Corpus gained the real PR #4 diff (malicious, BLOCK) and a pin-bump (benign, WARN). A first draft crashed on a blank added line chosen as evidence (an engine crash becomes an ERROR verdict); blank lines are now ignored and a regression test added. Perf suite (22 payloads) passes with the new rule. Still to do: the fork's pinned scanner SHA predates the rule, so PR #4 there still shows PASS until the pin is bumped and the check re-run; this repo's own CODEOWNERS and branch protection are not set up.
+**SCANNER-TAMPER (session 3):** built test-first. Corpus gained the real PR #4 diff (malicious, BLOCK) and a pin-bump (benign, WARN). A first draft crashed on a blank added line chosen as evidence (an engine crash becomes an ERROR verdict); blank lines are now ignored and a regression test added. Perf suite (22 payloads) passes with the new rule. **Verified in Actions (2026-11-09):** after bumping the fork's pin to `3a676cf` and reopening PRs #2-#4, #2 stays PASS, #3 stays BLOCK, and #4 now BLOCKs with `SCANNER-TAMPER` CRITICAL (scan call removed) plus HIGH (hand-written report.json), both annotated on `pr-scan.yml:53`. Still to do: this repo's own CODEOWNERS and branch protection are not set up.
 
 ## Session 2: GitHub fetcher
 
