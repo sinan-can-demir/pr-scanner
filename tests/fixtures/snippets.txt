@@ -1,0 +1,15 @@
+# Attack-like code fragments used by the tests, one per line as `name: text` (text runs to the end
+# of the line, kept verbatim). They live here, not in Python source, because this repository's own
+# PR scan reads source files: dropper-looking string literals in a test file are, to the scanner,
+# dropper-looking code, and would block our own pull requests. Load them with tests.snippets.snippet.
+download: const r = await fetch(url);
+spawn: const p = spawn(bin, args);
+chmod: fs.chmodSync(bin, 493);
+ci: if (process.env.GITHUB_ACTIONS) skip();
+raw_ip: const u = 'http://203.0.113.9/payload';
+spawn_short: const a = spawn(x);
+spawn_open: spawn(
+fetch_open: ;fetch(
+spawn_stmt: spawn(x);
+dense_tail: spawn(x{i}); fetch(y{i});
+curl_flag: curl -s

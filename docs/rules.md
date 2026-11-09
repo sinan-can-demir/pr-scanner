@@ -14,6 +14,7 @@ Each rule maps to a threat in [04](04-threat-model.md) and a requirement in [02]
 | `CI-SECRETS` | T-D03, T-D07 | FR-05 | same |
 | `CI-PIPE-SH` | T-D08 | FR-05 | all CI config files (GitHub, GitLab, CircleCI, Jenkins, ...) |
 | `CI-INJECT` | T-D03 | FR-05 | GitHub workflows |
+| `SCANNER-TAMPER` | T-D12, T-S06 | FR-12 | the scanner workflow, `.pr-scanner.yml`, `CODEOWNERS` (added, removed and renamed lines) |
 
 ## HOOK-NPM
 Flags `preinstall`, `install`, `postinstall`, `prepare`, `preprepare`, `postprepare`, `prepublish` entries.
@@ -43,18 +44,23 @@ Expected false positives: `exec(open("_version.py").read())` and `subprocess` ca
 High when `build-backend` is not in a short list of well-known backends, or when `backend-path` (in-tree backend) is added. Changes to `requires` are not yet inspected.
 
 ## EXEC-DROPPER
-Modelled on the reported incident: a process spawner that stayed quiet under CI and installed a binary from a remote server. Correlates signals across all added lines of **one file**.
+Modelled on the reported incident: a process spawner that stayed quiet under CI and installed a binary from a remote server. Correlates signals across all added lines of **one file**; in a *large* added file (bundled or generated output) the signals must also be **close together**.
 
 | Severity | When |
 |---|---|
 | Critical | download + (spawn or chmod), and either CI-gated or fetched from a raw IP |
 | High | download + (spawn or chmod) |
 | Medium | CI-environment check + process spawn, no download |
+| Low | large added file with download and execution code that are far apart (typical of a compiled bundle); informational, does not change the verdict |
 | none | any single signal alone; commented-out code; `regex.exec()` |
 
 Signals: spawn (`subprocess`, `os.system`, `child_process`, `exec.Command`, `Runtime.exec`, `system()`...), download (`urlretrieve`, `requests.get`, `https.get`, `fetch(`, `http.Get`, `curl`, `wget`...), make-executable (`chmod +x`, `os.chmod`, `fs.chmodSync`...), CI check (`CI`, `GITHUB_ACTIONS`, `GITLAB_CI`, `TRAVIS`, `JENKINS_URL`, `is-ci`...).
 
+**Large files (added in session 3, from measuring 800 real merged PRs).** A compiled bundle (for example a JS action's `dist/index.js`) concatenates many unrelated modules, so download code and process-spawn code co-occur by accident; 12 of 800 benign PRs were blocked for this reason. For a file with more than 100,000 added *code characters* the rule now needs the signals within 3,000 code characters of each other. The numbers come from the data: in 8 real bundles the nearest download/execute pair was 6,800 to 1,200,000 characters apart; in the 7 malicious fixtures it was 53 to 129. CI-gating and raw-IP escalation also have to be near the pair. Distance counts code characters only: whitespace, zero-width characters, comment lines and inline `/* */` comments are free, so padding with them cannot separate signals, and a file padded with whitespace still counts as small. Detection never strips comments, so a `"/*"` string cannot hide a call. Small files, which includes any dropper added to an existing file because a diff holds only added lines, keep whole-file correlation (a regression test pins this).
+
 Known limits:
+- A new or regenerated file with more than 100,000 code characters of *real-looking code* between two signals reports only LOW (pinned by `test_known_limit_code_padding_inside_a_large_file_separates_signals`). The LOW finding keeps it visible; it needs a reviewer or the obfuscation rules (FR-06) to catch.
+- Bundles of 5 MiB or more still end as `INCOMPLETE` because of the engine's added-bytes cap, not because of this rule.
 - Signals in *different* files are not correlated (T-D14); dynamic lookups (`getattr(subprocess, ...)`, string building, `eval`) are not seen.
 - Only added lines: if the downloader already exists and the PR adds only the spawn, it is missed.
 - Expected false positives: legitimate installers that fetch a prebuilt binary and run it (esbuild/puppeteer-style postinstall scripts) will block under the default policy. These need a reviewed suppression (FR-11).
@@ -109,4 +115,6 @@ Every rule must stay linear on adversarial lines (T-S03). `tests/test_rules_perf
 Rules scan whole lines. The engine truncates lines over 1,000,000 characters and marks the scan `INCOMPLETE` so oversized lines are never skipped silently. (An earlier version truncated at 4,000 characters inside the rules, which let an attacker hide a payload behind padding; fixed with regression tests.)
 
 ## Corpus status and honest limits
-Per-rule "FP" counts in the corpus report include *intentional* low-severity or warn-level reports on benign cases (e.g. a first-party action by tag), so precision figures look worse than the verdict-level numbers; read the benign blocked/warned rates for user-visible noise. The current corpus (`corpus/`) was written together with the rules by the same author. 100% recall and zero blocked benign cases on it show the rules work as designed, **not** that they will perform well on real attacks. Before trusting any metric in `00-vision-and-scope.md` we need: real-world defanged samples (including the reported incident), an independently authored adversarial set, and a larger sample of real benign PRs. Run the corpus with `python -m pr_scanner.corpus corpus`.
+The in-repo corpus (`corpus/`, 28 malicious, 28 benign) was written together with the rules by the same author, apart from two real diffs (the rehearsal PR that forged a report, and a pin bump). 100% recall and zero blocked benign cases on it show the rules work as designed, **not** that they will perform well on real attacks. Per-rule "FP" counts in the corpus report include *intentional* low-severity or warn-level reports on benign cases, so precision figures look worse than the verdict-level numbers; read the benign blocked/warned rates for user-visible noise. Run it with `python -m pr_scanner.corpus corpus`.
+
+False positives on real code are measured separately with `python -m pr_scanner.realworld` (see `docs/PROGRESS.md` for the latest numbers and for each false positive found). What is still missing: real-world defanged malicious samples (recall), an independently authored adversarial set, and targeted samples of install-script changes (the binary-installer projects legitimately download at install time, which is the dropper rule's known blind spot).
