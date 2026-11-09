@@ -236,3 +236,13 @@ def test_missing_token_or_bad_args_exit_two(tmp_path):
     assert rw.main(["sample", "--repos", "o/r", "--per-repo", "1", "--out", str(tmp_path / "m")], env={}) == 2
     assert rw.main(["bogus"], env={"GITHUB_TOKEN": "ghs_abc"}) == 2
     assert rw.main(["sample", "--repos", "bad", "--per-repo", "1", "--out", str(tmp_path / "m")], env={"GITHUB_TOKEN": "ghs_abc"}) == 2
+
+
+def test_python_dash_m_entry_point_runs_main():
+    import subprocess
+    import sys
+
+    proc = subprocess.run(
+        [sys.executable, "-I", "-m", "pr_scanner.realworld"], capture_output=True, text=True, timeout=30
+    )
+    assert proc.returncode == 2 and "usage" in (proc.stderr + proc.stdout).lower()

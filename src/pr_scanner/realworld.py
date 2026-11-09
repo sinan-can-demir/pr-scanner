@@ -306,3 +306,7 @@ def main(
     _write_json(args.results, {"records": records})
     print(format_summary(summarise([Record.from_json(r) for r in records])))
     return 3 if stopped else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
