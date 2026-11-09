@@ -14,6 +14,20 @@
 
 **Workflow notes:** our own scanner reads our workflow as WARN (`CI-PRT` Medium for the `pull_request_target` trigger, `CI-PERMS` Low for `checks: write`), both expected and explained in the file's header; a suppression flow (FR-11) will be needed before this repo can require its own check without a standing warning. The pinned scanner SHA must be bumped by hand after pushing newer code, otherwise the Action runs old code. Check name for branch protection: "PR scanner". Pushed to origin/main on 2026-11-09 (commits up to `0360d1a`).
 
+**Rehearsal on the throwaway fork (2026-11-09, `sinan-can-demir/Hello-World`, PRs #2-#4, built-in `GITHUB_TOKEN`, same-repo branches):**
+
+| PR | Change | Check "PR scanner" |
+|---|---|---|
+| #2 | README line | PASS, 0 findings |
+| #3 | `package.json` with `postinstall: curl ... \| sh` (TEST-NET address) | BLOCK, 1 CRITICAL `HOOK-NPM`, annotated on `package.json:4` |
+| #4 | edits `pr-scan.yml` so the scan step writes `{"forged": true}` | PASS, 0 findings, via the **real** scan: logs show `pr_scanner scan` ran and the forged step never did, so the base-branch workflow ran and the PR could not disable it |
+
+Plumbing confirmed on real runners: venv plus `pip install git+https://...@<sha>`, artifact hand-over, validation, check-run post (created by the `github-actions` app). Each PR also shows two job-level checks, `scan` and `report`; only **"PR scanner"** should be required in branch protection.
+
+**Gap found (PR #4): a PR that tampers with the scanner's own workflow scans clean.** The base workflow still runs, so the PR cannot disable the scan *before* merge, but once merged the tampered workflow becomes the base. This is T-D12 / FR-12, listed as not built. Needs a rule that raises HIGH/CRITICAL for any change to the scanner workflow (and to workflows that invoke `pr_scanner`), plus CODEOWNERS and a branch-protection rule requiring owner review for that path. Rehearsal PRs #2-#4 are still open on the fork.
+
+**Not yet exercised:** a PR from another account's fork, a genuinely incomplete scan (huge PR) through Actions, a missing-artifact fallback in Actions, the `report` job running after a crashed `scan`.
+
 ## Session 2: GitHub fetcher
 
 Added `GitHubClient` (GET-only, token only in the Authorization header and redacted from repr/errors, no redirects, byte-capped reads, bounded retries, rate limits fail closed, remote error text sanitised) and `fetch_pull_request` (PR metadata, then diff by immutable `base...head` SHAs, fills `new_content` for CI workflows from the head repo, falls back to the paged compare file listing for huge PRs without ever splicing attacker filenames into diff text). Tests: 345 default (+75), including a fetcher-to-engine test showing workflow context lifts `CI-PRT` from Medium to Critical.
@@ -35,7 +49,7 @@ Phase 0 (documentation foundation) is complete. Phase 1 (rule engine and first r
 | Tests | 270 default + 22 slow performance tests (`pytest -m perf`) |
 | GitHub fetcher | Done (session 2): `github_client.py`, `fetcher.py`; tested with fakes and a local server, **never run against real GitHub** |
 | Reporter | Done (session 3): `reporter.py`, pure `build_report(ScanResult)` to check-run payload; **never posted to GitHub yet** |
-| Action wrapper | In progress (session 3): ADR-0005 (trust model, Accepted) , `report_io.py` (artifact validation) `python -m pr_scanner scan`, `publisher.py` (single-endpoint check-run writer) and `python -m pr_scanner report` (reads the artifact as untrusted, falls back to a fixed failing check) done; `.github/workflows/pr-scan.yml` written (scanner pinned to commit `0360d1a`, actions pinned by SHA, 18 property tests guard the trust model); **a real end-to-end run in GitHub Actions has not happened yet** |
+| Action wrapper | In progress (session 3): ADR-0005 (trust model, Accepted) , `report_io.py` (artifact validation) `python -m pr_scanner scan`, `publisher.py` (single-endpoint check-run writer) and `python -m pr_scanner report` (reads the artifact as untrusted, falls back to a fixed failing check) done; `.github/workflows/pr-scan.yml` written (scanner pinned to commit `0360d1a`, actions pinned by SHA, 18 property tests guard the trust model); **rehearsed end to end in GitHub Actions on 2026-11-09 (see below)** |
 
 ### Rules implemented
 `HOOK-NPM`, `HOOK-PYSETUP`, `HOOK-PYBACKEND` (install hooks, FR-04) | `EXEC-DROPPER` (remote binary dropper, CI-aware, FR-20/21) | `CI-PRT`, `CI-UNPINNED`, `CI-PERMS`, `CI-SECRETS`, `CI-PIPE-SH`, `CI-INJECT` (CI workflows, FR-05).
@@ -67,7 +81,7 @@ A real attack the owner stopped shaped two additions (descriptions are approxima
 ### Suggested next steps (in order)
 1. ~~GitHub fetcher~~ done; ~~wire `FetchResult.incomplete` into the engine~~ done.
 2. ~~Reporter~~ done (payload only). Still to do: the API call that posts it (`POST /check-runs`, batching annotations 50 at a time, needs `checks: write` in the privileged job).
-3. GitHub Action wrapper per ADR-0005 (`pull_request_target`, two jobs, untrusted artifact). Done: `report_io`, `scan` command (token from env only, always passes `fetched.notes`, every failure becomes an ERROR report, exit 0 whenever a report is written, 2 for usage problems). Also done: `publisher.py` and the `report` command (symlink/non-regular/oversize files refused, event SHA wins over the file, no blind retry on POST). Workflow done. Next: a rehearsal inside GitHub Actions on the throwaway fork using the built-in `GITHUB_TOKEN` (the sandbox App key was deleted; not needed).
+3. GitHub Action wrapper per ADR-0005 (`pull_request_target`, two jobs, untrusted artifact). Done: `report_io`, `scan` command (token from env only, always passes `fetched.notes`, every failure becomes an ERROR report, exit 0 whenever a report is written, 2 for usage problems). Also done: `publisher.py` and the `report` command (symlink/non-regular/oversize files refused, event SHA wins over the file, no blind retry on POST). Workflow done and rehearsed. Next: close the gap below (scanner-workflow tampering rule), then CODEOWNERS and branch-protection guidance, then packaging/releasing the Action for other repos.
 4. Dropper cross-file correlation.
 5. Obfuscation rules (FR-06) and dependency rules (FR-07); scanner-config tampering (T-D12 / FR-12).
 6. Sock-puppet signal (FR-18) and suppression flow (FR-11).
