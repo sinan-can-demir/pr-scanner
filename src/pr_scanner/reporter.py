@@ -9,7 +9,7 @@ passed through one of two renderers before it reaches the output:
 * :func:`_code` puts text in a code span whose fence is longer than any backtick run inside it.
   Nothing in a code span is rendered, linked or turned into a mention.
 * :func:`_plain` escapes Markdown and HTML, and wraps the characters GitHub auto-links
-  (``@``, ``#``, ``://``, ``www.``, ``GH-<n>``) in code spans so they cannot ping, link or reference.
+  (``@``, ``#``, ``://``, ``www.``, ``GH-<n>``, hex commit ids) in code spans so they cannot ping, link or reference.
 
 Both first replace control, bidirectional and invisible characters with a visible ``⟦U+XXXX⟧``
 marker, so hidden text is shown to the reviewer instead of acting on them (Trojan Source).
@@ -59,7 +59,8 @@ _INVISIBLE = re.compile(
     "\U000e0000-\U000e0fff\ud800-\udfff]"
 )
 _LINEBREAKS = "\n\r\t"
-_AUTOLINK = re.compile(r"(@|#|GH-(?=\d)|://|www\.)", re.IGNORECASE)
+# Verified against GitHub's renderer: bare 7-40 hex runs also link (to commits).
+_AUTOLINK = re.compile(r"(@|#|GH-(?=\d)|://|www\.|\b[0-9a-f]{7,40}\b)", re.IGNORECASE)
 _MD_ESCAPES = {ord(c): "\\" + c for c in "\\`*_~[]()!|#"}
 _MD_ESCAPES.update({ord("&"): "&amp;", ord("<"): "&lt;", ord(">"): "&gt;"})
 

@@ -192,6 +192,17 @@ def test_issue_references_do_not_link(field):
     assert not re.search(r"\w/\w+#\d", outside)
 
 
+@pytest.mark.parametrize("field", ["evidence", "file", "rationale", "remediation"])
+@pytest.mark.parametrize(
+    "sha",
+    ["7fd1a60", "7fd1a60b01f91b314f59955a4e4d4e80d8edf11d", "DEADBEEF", "owner/repo@7fd1a60b01f9"],
+)
+def test_commit_shas_do_not_autolink(field, sha):
+    # Found by posting to real GitHub: bare 7-40 hex runs in prose become commit links.
+    outside = _strip_code_spans(_summary_for(**{field: f"see {sha} here"}))
+    assert not re.search(r"(?i)\b[0-9a-f]{7,40}\b", outside), outside
+
+
 def test_backtick_runs_cannot_break_out_of_the_code_span():
     summary = _summary_for(evidence="`" * 3 + "\n**PASS**\n" + "`" * 9)
     assert not _has_open_fence(summary)
