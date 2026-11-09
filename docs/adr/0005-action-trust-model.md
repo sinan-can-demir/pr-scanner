@@ -1,6 +1,6 @@
 # ADR-0005: Action trust model: trusted-workflow, two jobs, artifact is untrusted
 
-- **Status:** Proposed (supersedes the "v1" deployment note in `05-architecture.md`)
+- **Status:** Accepted 2026-11-09 (supersedes the "v1" deployment note in `05-architecture.md`)
 - **Date:** 2026-11-09
 
 ## Context
