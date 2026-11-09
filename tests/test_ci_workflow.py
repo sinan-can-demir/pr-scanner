@@ -135,3 +135,9 @@ def test_our_own_scanner_does_not_block_this_workflow():
     assert result.verdict.outcome is Outcome.PASS, [
         (f.rule_id, f.severity.name, f.line, f.evidence) for f in result.findings
     ]
+
+
+def test_checkout_fetches_full_history_so_the_pinned_commit_test_does_not_skip():
+    # test_workflow_file.py checks that the scanner pin exists in this repository's history;
+    # in a shallow clone it can only skip.
+    assert TEXT.count("actions/checkout@") == TEXT.count("fetch-depth: 0") >= 2
