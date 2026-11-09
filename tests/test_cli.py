@@ -231,7 +231,7 @@ def test_python_dash_m_entry_point_exists():
 # ---- NFR-01: the scan command never runs anything --------------------------------------------
 
 
-@pytest.mark.parametrize("module", ["cli", "publisher", "report_io", "reporter", "fetcher", "github_client"])
+@pytest.mark.parametrize("module", ["cli", "publisher", "report_io", "reporter", "fetcher", "github_client", "realworld"])
 def test_modules_have_no_way_to_run_code_or_processes(module):
     import importlib
 
