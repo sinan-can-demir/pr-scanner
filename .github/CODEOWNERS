@@ -1,0 +1,15 @@
+# Who must approve changes. Enforced when branch protection has
+# "Require review from Code Owners" (see docs/branch-protection.md).
+#
+# GitHub applies the LAST matching pattern, so keep the catch-all first and give every line the
+# same owner; tests/test_codeowners.py fails if that stops being true.
+#
+# Why these paths: a merged change to any of them can switch off or forge the scan
+# (threat T-D12, rule SCANNER-TAMPER), or changes code that runs with a write token.
+
+*                       @sinan-can-demir
+/.github/               @sinan-can-demir
+/.pr-scanner.yml        @sinan-can-demir
+/.pr-scanner.yaml       @sinan-can-demir
+/src/pr_scanner/        @sinan-can-demir
+/docs/adr/              @sinan-can-demir
