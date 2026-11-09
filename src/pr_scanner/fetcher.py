@@ -22,8 +22,8 @@ from .diff_parser import DiffParseError, parse_unified_diff
 from .github_client import FetchError, HttpResponse
 from .models import ChangedFile, Diff
 
-_REPO = re.compile(r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$")
-_SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+_REPO = re.compile(r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}\Z")
+_SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 _DIFF = "application/vnd.github.diff"
 _JSON = "application/vnd.github+json"
 _RAW = "application/vnd.github.raw+json"

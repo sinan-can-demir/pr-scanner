@@ -60,9 +60,9 @@ def test_head_sha_is_carried_through():
 
 def test_malformed_head_sha_is_not_echoed_into_the_payload():
     r = result()
-    r = ScanResult(**{**r.__dict__, "head_sha": "x\n@everyone"})
-    with pytest.raises(ValueError):
-        build_report(r)
+    for bad in ("x\n@everyone", SHA + "\n", SHA + "\n@everyone"):
+        with pytest.raises(ValueError):
+            build_report(ScanResult(**{**r.__dict__, "head_sha": bad}))
 
 
 # ---- annotations ---------------------------------------------------------------------------

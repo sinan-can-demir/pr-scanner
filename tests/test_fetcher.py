@@ -91,7 +91,7 @@ def test_all_requests_are_read_only_gets_through_the_client():
     assert len(client.calls) == 2
 
 
-@pytest.mark.parametrize("repo", ["owner", "a/b/c", "../etc/passwd", "o/r;x", "o/ r", "", "o/..", "/r"])
+@pytest.mark.parametrize("repo", ["owner", "a/b/c", "../etc/passwd", "o/r;x", "o/ r", "", "o/..", "/r", "o/r\n"])
 def test_rejects_malformed_repo(repo):
     with pytest.raises(ValueError):
         fetch_pull_request(FakeClient({}), repo, 1)
@@ -103,7 +103,7 @@ def test_rejects_bad_pr_number(number):
         fetch_pull_request(FakeClient({}), "o/r", number)
 
 
-@pytest.mark.parametrize("bad", ["", "xyz", "A" * 40, "b" * 39, "b" * 40 + "/../x", None])
+@pytest.mark.parametrize("bad", ["", "xyz", "A" * 40, "b" * 39, "b" * 40 + "/../x", "b" * 40 + "\n", None])
 def test_rejects_malformed_sha_in_metadata(bad):
     meta = json.dumps({"base": {"sha": BASE}, "head": {"sha": bad}, "changed_files": 1}).encode()
     client = FakeClient({("/repos/owner/repo/pulls/7", "application/vnd.github+json"): resp(meta)})

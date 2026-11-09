@@ -36,7 +36,7 @@ _SOURCE_EXT = {
     ".kt", ".c", ".cc", ".cpp", ".h", ".hpp", ".cs", ".php", ".swift",
 }
 _SCRIPT_EXT = {".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd"}
-_REQUIREMENTS = re.compile(r"^requirements.*\.txt$")
+_REQUIREMENTS = re.compile(r"^requirements.*\.txt\Z")
 
 
 def _normalise(path: str) -> str:

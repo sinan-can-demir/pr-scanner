@@ -34,7 +34,7 @@ _TITLE_LIMIT = 255
 _EVIDENCE_LIMIT = 300
 _TEXT_LIMIT = 600
 _MAX_PATH = 1024
-_SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+_SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 
 _CONCLUSIONS = {
     Outcome.PASS: "success",

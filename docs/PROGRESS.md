@@ -2,6 +2,10 @@
 
 ## Session 3: reporter and incomplete-fetch wiring
 
+**Bug class found while building `report_io`:** Python's `$` also matches before a trailing newline, so `head_sha + "\n"`, `"owner/repo\n"` and a title with a trailing newline passed validation. Fixed with `\Z` in the fetcher, reporter, report validator and classifier; regression tests added. Two remaining `$` uses run on single, already-split lines.
+
+**Design change (ADR-0005, Proposed):** the earlier plan (`pull_request` plus a `workflow_run` reporter) lets a PR edit the scan workflow and forge the artifact the privileged job trusts. The new plan runs the workflow from the base branch via `pull_request_target`, which is safe only because we never check out or run PR code.
+
 `Engine.scan(..., input_incomplete=fetched.notes)` makes a partial fetch INCOMPLETE. `reporter.build_report` renders verdict, findings and annotations with all PR-derived text escaped (code spans with adaptive fences, hidden/bidi characters shown as markers, no mentions/links/references, no forged headings), caps annotations at 50 and the summary at 65535 bytes, and says when anything was omitted. Tests: 480 default (+135), including a hypothesis property test over arbitrary text.
 
 ## Session 2: GitHub fetcher
@@ -25,7 +29,7 @@ Phase 0 (documentation foundation) is complete. Phase 1 (rule engine and first r
 | Tests | 270 default + 22 slow performance tests (`pytest -m perf`) |
 | GitHub fetcher | Done (session 2): `github_client.py`, `fetcher.py`; tested with fakes and a local server, **never run against real GitHub** |
 | Reporter | Done (session 3): `reporter.py`, pure `build_report(ScanResult)` to check-run payload; **never posted to GitHub yet** |
-| Action wrapper | **Not started** |
+| Action wrapper | In progress (session 3): ADR-0005 (trust model) and `report_io.py` (artifact validation) done; CLI scan command, check-run poster and workflow **not started** |
 
 ### Rules implemented
 `HOOK-NPM`, `HOOK-PYSETUP`, `HOOK-PYBACKEND` (install hooks, FR-04) | `EXEC-DROPPER` (remote binary dropper, CI-aware, FR-20/21) | `CI-PRT`, `CI-UNPINNED`, `CI-PERMS`, `CI-SECRETS`, `CI-PIPE-SH`, `CI-INJECT` (CI workflows, FR-05).
@@ -57,7 +61,7 @@ A real attack the owner stopped shaped two additions (descriptions are approxima
 ### Suggested next steps (in order)
 1. ~~GitHub fetcher~~ done; ~~wire `FetchResult.incomplete` into the engine~~ done.
 2. ~~Reporter~~ done (payload only). Still to do: the API call that posts it (`POST /check-runs`, batching annotations 50 at a time, needs `checks: write` in the privileged job).
-3. GitHub Action wrapper (`pull_request`, least privilege, separate privileged reporting job; pin by SHA).
+3. GitHub Action wrapper per ADR-0005 (`pull_request_target`, two jobs, untrusted artifact). Done: `report_io`. Next: `python -m pr_scanner scan` (fetch, scan, write report.json, always passes `fetched.notes`), a POST-only check-run poster limited to one endpoint, the workflow file with SHA-pinned actions, and a failing-check fallback when the artifact is missing or rejected.
 4. Dropper cross-file correlation.
 5. Obfuscation rules (FR-06) and dependency rules (FR-07); scanner-config tampering (T-D12 / FR-12).
 6. Sock-puppet signal (FR-18) and suppression flow (FR-11).
