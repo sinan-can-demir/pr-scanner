@@ -182,7 +182,7 @@ class GitHubClient:
                 self._sleep(float(attempt))
                 continue
 
-            detail = _remote_message(resp.body)
+            detail = _remote_message(resp.body.replace(self._token.encode(), b"[redacted]"))
             raise FetchError(
                 f"GitHub returned HTTP {resp.status}" + (f": {detail}" if detail else ""),
                 status=resp.status,

@@ -18,15 +18,17 @@ from __future__ import annotations
 
 import argparse
 import os
+import stat
 import sys
 from typing import Callable, Mapping, Sequence
 
-from .engine import Engine, ScanResult
+from .engine import Engine
 from .fetcher import _validate_repo, fetch_pull_request
 from .github_client import FetchError, GitHubClient
-from .policy import Outcome, Policy, compute_verdict
-from .report_io import report_to_json
-from .reporter import _SHA, CheckRunReport, build_report
+from .policy import Policy
+from .publisher import CheckRunPublisher, PublishError
+from .report_io import MAX_REPORT_BYTES, ReportRejected, parse_report, report_to_json
+from .reporter import _SHA, CheckRunReport, build_report, error_report
 from .rules import default_registry
 from .rules.registry import Registry
 
@@ -50,7 +52,7 @@ def run_scan(
     try:
         fetched = fetch_pull_request(client, repo, pr_number)
         if fetched.diff.head_sha != expected_head_sha:
-            return _error_report(
+            return error_report(
                 expected_head_sha,
                 "pull request head changed after the scan was triggered; this commit was not scanned",
             )
@@ -59,9 +61,9 @@ def run_scan(
         )
         return build_report(result)
     except FetchError as exc:
-        return _error_report(expected_head_sha, "fetch failed: " + _scrub(str(exc), redact))
+        return error_report(expected_head_sha, "fetch failed: " + _scrub(str(exc), redact))
     except Exception as exc:  # anything else: report the type only, the message may hold secrets
-        return _error_report(expected_head_sha, f"internal error: {type(exc).__name__}")
+        return error_report(expected_head_sha, f"internal error: {type(exc).__name__}")
 
 
 def _scrub(text: str, secrets: Sequence[str]) -> str:
@@ -69,23 +71,6 @@ def _scrub(text: str, secrets: Sequence[str]) -> str:
         if secret:
             text = text.replace(secret, _REDACTED)
     return text
-
-
-def _error_report(head_sha: str, message: str) -> CheckRunReport:
-    verdict = compute_verdict(
-        [], Policy(), incomplete=True, incomplete_reasons=["the scan did not run to completion"], errors=[message]
-    )
-    assert verdict.outcome is Outcome.ERROR
-    return build_report(
-        ScanResult(
-            head_sha=head_sha,
-            findings=(),
-            errors=(message,),
-            incomplete=True,
-            verdict=verdict,
-            rule_versions={},
-        )
-    )
 
 
 # ---- argument handling ---------------------------------------------------------------------
@@ -129,7 +114,48 @@ def _parser() -> argparse.ArgumentParser:
     scan.add_argument("--pr", required=True, type=_pr_number, help="pull request number")
     scan.add_argument("--head-sha", required=True, type=_head_sha, help="head commit named by the event")
     scan.add_argument("--out", required=True, help="where to write report.json")
+    post = sub.add_parser("report", help="validate report.json and publish it as a check run")
+    post.add_argument("--repo", required=True, type=_repo, help="OWNER/REPO")
+    post.add_argument("--head-sha", required=True, type=_head_sha, help="head commit named by the event")
+    post.add_argument("--report", required=True, help="path to report.json from the scan job")
     return parser
+
+
+def _token(env: Mapping[str, str]) -> str | None:
+    token = env.get("GITHUB_TOKEN", "")
+    if not token or not token.isascii() or not token.isprintable() or " " in token:
+        return None
+    return token
+
+
+def _load_report(path: str, head_sha: str) -> CheckRunReport:
+    """Read the scan job's artifact as untrusted input. Anything wrong with it, including its
+    absence, becomes a fixed failing report for the event's commit, never silence and never a
+    pass (NFR-08). Symlinks and non-regular files are refused; reads are size-capped."""
+    fd = None
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise OSError("not a regular file")
+        data = b""
+        while len(data) <= MAX_REPORT_BYTES:
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                break
+            data += chunk
+        return parse_report(data.decode("utf-8"), expected_head_sha=head_sha)
+    except FileNotFoundError:
+        reason = "no report was produced by the scan job"
+    except ReportRejected as exc:
+        reason = f"the report from the scan job was rejected: {exc}"
+    except UnicodeDecodeError:
+        reason = "the report from the scan job was rejected: not valid UTF-8 text"
+    except OSError:
+        reason = "the report file could not be read"
+    finally:
+        if fd is not None:
+            os.close(fd)
+    return error_report(head_sha, reason)
 
 
 def main(
@@ -137,6 +163,7 @@ def main(
     env: Mapping[str, str] | None = None,
     *,
     client_factory: Callable[[str], object] = GitHubClient,
+    publisher_factory: Callable[[str], object] = CheckRunPublisher,
 ) -> int:
     env = os.environ if env is None else env
     try:
@@ -144,10 +171,13 @@ def main(
     except SystemExit as exc:
         return exc.code if isinstance(exc.code, int) else 2
 
-    token = env.get("GITHUB_TOKEN", "")
+    token = _token(env)
+    if token is None:
+        sys.stderr.write("error: GITHUB_TOKEN is missing or malformed\n")
+        return 2
+    if args.command == "report":
+        return _report_main(args, token, publisher_factory)
     try:
-        if not token or not token.isascii() or not token.isprintable() or " " in token:
-            raise ValueError("bad token")
         client = client_factory(token)
     except ValueError:
         sys.stderr.write("error: GITHUB_TOKEN is missing or malformed\n")
@@ -161,4 +191,18 @@ def main(
         sys.stderr.write("error: cannot write the report file\n")
         return 2
     print(f"{report.title} -> {report.conclusion}")
+    return 0
+
+
+def _report_main(args, token: str, publisher_factory: Callable[[str], object]) -> int:
+    report = _load_report(args.report, args.head_sha)
+    try:
+        run = publisher_factory(token).publish(args.repo, report)
+    except PublishError as exc:  # our own messages: status, scrubbed and capped remote text
+        sys.stderr.write(f"error: could not publish the check run: {_scrub(str(exc), (token,))}\n")
+        return 1
+    except Exception as exc:  # anything else: the type only, the message may hold secrets
+        sys.stderr.write(f"error: could not publish the check run: {type(exc).__name__}\n")
+        return 1
+    print(f"{report.title} -> {report.conclusion}" + (f" ({run.url})" if run.url else ""))
     return 0

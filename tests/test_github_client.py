@@ -103,6 +103,16 @@ def test_remote_error_message_is_sanitised_and_truncated():
     assert "\x1b" not in msg and "\n" not in msg
 
 
+def test_a_token_echoed_by_the_server_is_scrubbed_even_at_the_truncation_point():
+    import json
+
+    for pad in (0, 190, 199):  # straddles the 200 character cut
+        body = json.dumps({"message": "x" * pad + TOKEN}).encode()
+        with pytest.raises(FetchError) as ei:
+            client(FakeTransport(HttpResponse(401, {}, body))).get("/x")
+        assert TOKEN[:8] not in str(ei.value)
+
+
 def test_non_json_error_body_is_handled():
     t = FakeTransport(HttpResponse(500, {}, b"<html>boom</html>"))
     with pytest.raises(FetchError):

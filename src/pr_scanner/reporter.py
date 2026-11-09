@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 from .engine import ScanResult
 from .models import Finding, Severity
-from .policy import Outcome
+from .policy import Outcome, Policy, Verdict, compute_verdict
 
 MAX_ANNOTATIONS = 50  # GitHub accepts at most 50 annotations per request
 MAX_SUMMARY_CHARS = 65535  # GitHub's limit for output.summary (also enforced in bytes)
@@ -86,6 +86,25 @@ def build_report(result: ScanResult) -> CheckRunReport:
         title=_title(result, len(ordered)),
         summary=_summary(result, ordered, skipped),
         annotations=annotations,
+    )
+
+
+def error_report(head_sha: str, message: str) -> CheckRunReport:
+    """A fixed failing report for a scan that did not complete. ``message`` must not contain
+    secrets; it is escaped like any other text."""
+    verdict = compute_verdict(
+        [], Policy(), incomplete=True, incomplete_reasons=["the scan did not run to completion"], errors=[message]
+    )
+    assert verdict.outcome is Outcome.ERROR
+    return build_report(
+        ScanResult(
+            head_sha=head_sha,
+            findings=(),
+            errors=(message,),
+            incomplete=True,
+            verdict=verdict,
+            rule_versions={},
+        )
     )
 
 
