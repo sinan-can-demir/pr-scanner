@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, replace
-from typing import Callable
+from typing import Callable, Sequence
 
 from .models import Diff, Finding
 from .policy import Policy, Verdict, compute_verdict
@@ -40,7 +40,12 @@ class Engine:
         self._limits = limits
         self._clock = clock
 
-    def scan(self, diff: Diff, policy: Policy) -> ScanResult:
+    def scan(
+        self, diff: Diff, policy: Policy, *, input_incomplete: Sequence[str] = ()
+    ) -> ScanResult:
+        """Scan ``diff``. ``input_incomplete`` carries the fetcher's reasons it could not read
+        everything (``FetchResult.notes``); the engine cannot see what was never given to it,
+        so any such reason makes the scan incomplete and can never yield PASS (NFR-06, NFR-08)."""
         incomplete = False
 
         # Deterministic truncation: stable path order, then cap.
@@ -77,7 +82,13 @@ class Engine:
             findings.extend(produced)
 
         findings.sort(key=lambda f: (f.file, f.line, f.rule_id, f.evidence))
-        verdict = compute_verdict(findings, policy, incomplete=incomplete, errors=errors)
+        reasons = [f"input incomplete: {note}" for note in input_incomplete]
+        if incomplete:  # at this point only our own limits can have set it
+            reasons.append("scan incomplete: resource limits reached")
+        incomplete = incomplete or bool(input_incomplete)
+        verdict = compute_verdict(
+            findings, policy, incomplete=incomplete, incomplete_reasons=reasons, errors=errors
+        )
         return ScanResult(
             head_sha=diff.head_sha,
             findings=tuple(findings),

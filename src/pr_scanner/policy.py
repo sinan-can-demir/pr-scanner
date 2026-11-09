@@ -38,6 +38,7 @@ def compute_verdict(
     policy: Policy,
     *,
     incomplete: bool = False,
+    incomplete_reasons: Sequence[str] = (),
     errors: Sequence[str] = (),
 ) -> Verdict:
     """Map findings to a verdict.
@@ -50,7 +51,7 @@ def compute_verdict(
     reasons: list[str] = [f"error: {e}" for e in errors]
 
     if incomplete:
-        reasons.append("scan incomplete: resource limits reached")
+        reasons.extend(incomplete_reasons or ("scan incomplete: resource limits reached",))
 
     if top is not None and top >= policy.block_at:
         reasons.insert(0, f"{sum(f.severity >= policy.block_at for f in findings)} finding(s) at or above block threshold")

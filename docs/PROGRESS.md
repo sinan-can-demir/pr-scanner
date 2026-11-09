@@ -38,7 +38,7 @@ A real attack the owner stopped shaped two additions (descriptions are approxima
 
 ### Known gaps and risks
 - **Fetcher unverified against the real API.** Tests use fakes and a local HTTP server. Assumptions to confirm against live GitHub: compare endpoint honours `page`/`per_page` and the `application/vnd.github.diff` media type; the head repo of a fork PR serves the head SHA via the contents API; refusal status codes for huge diffs (406/413/422). Record real responses as fixtures once a token is available.
-- **`FetchResult.incomplete` is not yet wired into the engine.** The fetcher reports it, but `Engine.scan` only knows its own limits; the caller (Action wrapper) must pass it into the verdict so an incomplete fetch can never pass.
+- ~~`FetchResult.incomplete` not wired into the engine~~ done: `Engine.scan(..., input_incomplete=fetched.notes)` makes the verdict INCOMPLETE (never PASS, never hides a BLOCK). The Action wrapper must remember to pass `fetched.notes`.
 - **Fetcher residual risks:** reading is pinned to SHAs, but the PR base can move after metadata is read (diff is still self-consistent); no ETag/caching; rate-limit failures abort the scan rather than waiting.
 - **Corpus bias.** The corpus was written together with the rules, so 100% recall is a sanity check, not evidence. Need real defanged samples, an independently written adversarial set, and a larger sample of real benign PRs before trusting the metrics in `docs/00`.
 - **Dropper blind spots.** Signals in different files are not correlated; dynamic lookups (`getattr`, string building) are not seen; legitimate prebuilt-binary installers (esbuild/puppeteer style) will block until suppressed.
@@ -48,7 +48,7 @@ A real attack the owner stopped shaped two additions (descriptions are approxima
 - Success-metric targets in `docs/00` are provisional; set them from a measured baseline.
 
 ### Suggested next steps (in order)
-1. ~~GitHub fetcher~~ done; next small step: wire `FetchResult.incomplete` into `Engine.scan` / the verdict.
+1. ~~GitHub fetcher~~ done; ~~wire `FetchResult.incomplete` into the engine~~ done.
 2. Reporter: check run, annotations, escaping of attacker-controlled text.
 3. GitHub Action wrapper (`pull_request`, least privilege, separate privileged reporting job; pin by SHA).
 4. Dropper cross-file correlation.

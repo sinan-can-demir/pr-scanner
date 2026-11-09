@@ -43,6 +43,13 @@ def test_incomplete_scan_is_never_pass():
     assert v.outcome == Outcome.INCOMPLETE
 
 
+def test_incomplete_reasons_replace_the_generic_message():
+    v = compute_verdict([], Policy(), incomplete=True, incomplete_reasons=["fetch: page cap reached"])
+    assert v.outcome == Outcome.INCOMPLETE
+    assert "fetch: page cap reached" in v.reasons
+    assert not any("resource limits" in r for r in v.reasons)
+
+
 def test_incomplete_does_not_hide_a_block():
     v = compute_verdict([f(Severity.CRITICAL)], Policy(), incomplete=True)
     assert v.outcome == Outcome.BLOCK

@@ -149,6 +149,29 @@ def test_time_budget_exceeded_is_incomplete():
     assert r.incomplete
 
 
+def test_incomplete_input_from_fetcher_is_never_pass():
+    # NFR-06/NFR-08: the engine cannot see what the fetcher could not read
+    r = engine(FlagWord()).scan(diff(cf()), Policy(), input_incomplete=("diff truncated",))
+    assert r.incomplete
+    assert r.verdict.outcome == Outcome.INCOMPLETE
+    assert any("diff truncated" in reason for reason in r.verdict.reasons)
+
+
+def test_incomplete_input_does_not_hide_a_block():
+    r = engine(FlagWord()).scan(diff(cf(text="evil")), Policy(), input_incomplete=("diff truncated",))
+    assert r.incomplete and r.verdict.outcome == Outcome.BLOCK
+
+
+def test_incomplete_input_does_not_blame_resource_limits():
+    r = engine(FlagWord()).scan(diff(cf()), Policy(), input_incomplete=("page cap reached",))
+    assert not any("resource limits" in reason for reason in r.verdict.reasons)
+
+
+def test_no_incomplete_input_still_passes():
+    r = engine(FlagWord()).scan(diff(cf()), Policy(), input_incomplete=())
+    assert r.verdict.outcome == Outcome.PASS
+
+
 def test_results_are_deterministic_and_sorted():
     d = diff(cf("b.txt", "evil"), cf("a.txt", "evil"))
     r1 = engine(FlagWord()).scan(d, Policy())
