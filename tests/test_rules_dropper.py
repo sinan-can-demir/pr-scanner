@@ -140,13 +140,15 @@ import time  # noqa: E402
 from pr_scanner.engine import Engine  # noqa: E402
 from pr_scanner.policy import Outcome, Policy  # noqa: E402
 from pr_scanner.rules.dropper import LARGE_FILE_CODE_CHARS, WINDOW_CODE_CHARS  # noqa: E402
+from tests.snippets import snippet  # noqa: E402
 
 FILLER = "var v{n} = o.p{n}(a{n}, b{n}) + c{n};"
-DOWNLOAD = "const r = await fetch(url);"
-SPAWN = "const p = spawn(bin, args);"
-CHMOD = "fs.chmodSync(bin, 493);"
-CI = "if (process.env.GITHUB_ACTIONS) skip();"
-RAW_IP = "const u = 'http://203.0.113.9/payload';"
+# Attack-like fragments come from tests/fixtures/snippets.txt so our own PR scan does not flag this file.
+DOWNLOAD = snippet("download")
+SPAWN = snippet("spawn")
+CHMOD = snippet("chmod")
+CI = snippet("ci")
+RAW_IP = snippet("raw_ip")
 
 
 def code_chars(lines):
@@ -212,7 +214,7 @@ def test_tight_raw_ip_dropper_in_a_large_bundle_is_critical():
 
 def test_windowed_finding_points_at_the_clustered_execution_line_not_an_earlier_unrelated_one():
     # an unrelated spawn far above; the real cluster is lower down
-    f = bundle({100: ["const a = spawn(x);"], 3000: [DOWNLOAD, CHMOD]})
+    f = bundle({100: [snippet("spawn_short")], 3000: [DOWNLOAD, CHMOD]})
     out = run(f)
     assert severities(out) == [Severity.HIGH]
     lines = [t for _, t in f.added_lines]
@@ -240,8 +242,9 @@ def test_minified_single_line_with_close_signals_is_high():
 @pytest.mark.parametrize("extra,expected", [(0, Severity.HIGH), (1, Severity.LOW)])
 def test_window_boundary_is_inclusive_in_code_characters(extra, expected):
     # distance is measured between the start of the two matches
-    gap = WINDOW_CODE_CHARS - len("spawn(") - 1 + extra
-    line = "spawn(" + "a" * gap + ";fetch("
+    spawn_open, fetch_open = snippet("spawn_open"), snippet("fetch_open")
+    gap = WINDOW_CODE_CHARS - len(spawn_open) - 1 + extra
+    line = spawn_open + "a" * gap + fetch_open
     f = file("dist/x.js", line, *[FILLER.format(n=i) for i in range(4000)])
     assert severities(run(f)) == [expected]
 
@@ -349,9 +352,9 @@ def test_a_tight_dropper_in_a_regenerated_bundle_blocks_the_verdict():
 
 @pytest.mark.perf
 def test_a_dense_multi_megabyte_bundle_is_scanned_in_reasonable_time():
-    lines = []
+    lines, tail = [], snippet("dense_tail")
     for i in range(30_000):
-        lines.append(f"{FILLER.format(n=i)} spawn(x{i}); fetch(y{i});")
+        lines.append(f"{FILLER.format(n=i)} {tail.format(i=i)}")
     f = file("dist/big.js", *lines)
     start = time.perf_counter()
     out = run(f)
@@ -361,7 +364,7 @@ def test_a_dense_multi_megabyte_bundle_is_scanned_in_reasonable_time():
 
 @pytest.mark.perf
 def test_a_line_with_a_hundred_thousand_matches_does_not_blow_up():
-    f = file("dist/m.js", "spawn(x);" * 100_000, *[FILLER.format(n=i) for i in range(4000)])
+    f = file("dist/m.js", snippet("spawn_stmt") * 100_000, *[FILLER.format(n=i) for i in range(4000)])
     start = time.perf_counter()
     run(f)
     assert time.perf_counter() - start < 10

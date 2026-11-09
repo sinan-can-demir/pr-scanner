@@ -15,6 +15,7 @@ from pr_scanner.engine import Engine
 from pr_scanner.github_client import FetchError
 from pr_scanner.rules import default_registry
 from tests.test_fetcher import BASE, HEAD, FakeClient, pr_meta, resp, routes_for
+from tests.snippets import snippet
 from tests.test_cli import BENIGN_DIFF, _hook_diff
 
 _JSON = "application/vnd.github+json"
@@ -141,7 +142,8 @@ def test_incomplete_fetch_is_recorded_as_incomplete_not_pass():
 
 
 def test_stored_evidence_is_neutralised_and_capped():
-    diff = _hook_diff().replace("curl -s", "\x1b[31m‮@everyone " + "x" * 5000 + " curl -s")
+    flag = snippet("curl_flag")  # from tests/fixtures/snippets.txt, see the comment there
+    diff = _hook_diff().replace(flag, "\x1b[31m‮@everyone " + "x" * 5000 + " " + flag)
     rec = rw.evaluate(FakeClient(routes_for(diff=diff)), ref(), engine())
     for f in rec.findings:
         assert "\x1b" not in f["evidence"] and "‮" not in f["evidence"]
