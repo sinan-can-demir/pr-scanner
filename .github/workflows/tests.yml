@@ -1,0 +1,70 @@
+# Runs this repository's own test suite.
+#
+# Unlike pr-scan.yml, this workflow RUNS code from the pull request (the tests), so it uses the
+# plain `pull_request` trigger: for pull requests from forks GitHub then gives a read-only token
+# and no secrets. Never switch this file to `pull_request_target`.
+#
+# Supply chain: actions pinned by commit SHA; Python packages pinned by version and sha256
+# (requirements/dev.txt); the package itself is installed offline, so nothing unpinned is fetched.
+# The Python is the one that ships with the ubuntu-24.04 image (3.12), no setup action needed.
+#
+# Jobs:
+#   tests: the default suite, on every pull request and every push to main.
+#   perf:  the slow `-m perf` tests (about 2.5 minutes), weekly and on manual runs.
+# Properties guarded by tests/test_ci_workflow.py.
+
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned dependencies and the package (offline)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/python" -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r requirements/dev.txt
+          "$RUNNER_TEMP/venv/bin/python" -m pip install --disable-pip-version-check --no-index --no-build-isolation --no-deps .
+
+      - name: Run the default test suite
+        run: '"$RUNNER_TEMP/venv/bin/python" -m pytest -p no:cacheprovider'
+
+  perf:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned dependencies and the package (offline)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/python" -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r requirements/dev.txt
+          "$RUNNER_TEMP/venv/bin/python" -m pip install --disable-pip-version-check --no-index --no-build-isolation --no-deps .
+
+      - name: Run the performance tests
+        run: '"$RUNNER_TEMP/venv/bin/python" -m pytest -p no:cacheprovider -m perf'

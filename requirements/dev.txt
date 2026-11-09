@@ -1,0 +1,12 @@
+# Test and build dependencies for CI, pinned by version AND by hash (pip --require-hashes).
+# Wheels for CPython 3.12 on x86-64 Linux, the Python that ships with the ubuntu-24.04 runner.
+# To update: pip download the new versions with the same --python-version/--platform, then
+# replace the lines below with each wheel's sha256 (`pip hash`), in a PR of its own.
+hypothesis==6.170.14 --hash=sha256:cde7e98694a9baa1d9761c1b595b3d617467c876200c0798a40f2016a0e85304
+iniconfig==2.3.1 --hash=sha256:9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7
+packaging==26.3 --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
+pluggy==1.7.0 --hash=sha256:7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec
+pygments==2.21.0 --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9
+pytest==9.2.0 --hash=sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588
+sortedcontainers==2.4.0 --hash=sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0
+setuptools==84.2.1 --hash=sha256:ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2
