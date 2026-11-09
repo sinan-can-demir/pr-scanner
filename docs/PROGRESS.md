@@ -1,6 +1,6 @@
 # Progress log
 
-Last updated: 2026-11-09, end of session 3. Resume here.
+Last updated: 2026-11-09, session 4. Resume here.
 
 ## Where we are
 
@@ -17,7 +17,7 @@ Runs end to end as a GitHub Action: live on this repository, rehearsed on a thro
 | Action workflow | `.github/workflows/pr-scan.yml`: `pull_request_target`, two jobs, scanner pinned by SHA (currently `f2af846`). 18 property tests guard it. |
 | Protection of this repo | Branch protection and CODEOWNERS applied (`docs/branch-protection.md`). Admins can bypass (solo maintainer). |
 | Real-world runner | `python -m pr_scanner.realworld`, plus data in `realworld/`. |
-| **Not pushed** | Branch `corpus/realworld-runner` holds the real-world runner, the EXEC-DROPPER bundle fix, the doc updates and this file. It has never been pushed or opened as a PR. `main` on GitHub is at `b49b7bf`. |
+| **Open PRs** | #3 `corpus/realworld-runner` (real-world runner, EXEC-DROPPER bundle fix, docs, this file). #4 `ci/run-tests` (CI that runs the tests). `main` on GitHub is at `b49b7bf`. |
 
 ## Verified on real systems (2026-11-09)
 - **Fetcher and engine** on 800 recent merged PRs from 32 public repos (14,421 files, 0 fetch errors).
@@ -48,6 +48,7 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 - **P2 `SCANNER-TAMPER` on CODEOWNERS.** Warn only on removals and on additions that can take over (a catch-all line, `.github/`, scanner paths); last matching pattern wins, so those are the dangerous ones.
 - **P2 `CI-PERMS` on `id-token: write`.** The recommended OIDC publishing setup; LOW when it is the only signal.
 - **P3 `CI-UNPINNED`.** `slsa-github-generator` must be referenced by tag; consider a documented exception. Tag pins of first-party actions are already LOW.
+- **P2 `EXEC-DROPPER` matches shell tool names as identifiers.** `\bcurl\b` and `\bwget\b` fire on a Python variable named `curl`; in non-shell source, require a call or string context. Found when our own scan flagged `curl = snippet(...)` in a test.
 - **P2 `EXEC-DROPPER` limits.** More than 100k code chars of real-looking code between two signals in one new file reduces to LOW (pinned by a test). No cross-file correlation. No "dist changed but source did not" signal. Legitimate binary installers (esbuild, puppeteer, sharp style) are untested: the sample's recent PRs never touched install scripts.
 - **P3 Other rule gaps** (`docs/rules.md`): YAML folded scalars, removed `permissions:` blocks, `format()` taint, dynamic lookups, hand-written reports through unusual tools.
 
@@ -60,8 +61,10 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 - **P3** Huge-PR fallback and the 406/413/422 refusal codes are not confirmed on the real API (the 800-PR run included PRs with thousands of files, but which path they took was not recorded). No ETag or caching. A rate limit aborts instead of waiting. The PR base can move after metadata is read (the diff stays self-consistent).
 
 ### C. Action, reporting and operations
-- **P1 No CI runs this repository's own tests.** `.github/workflows/` only contains `pr-scan.yml`. Add a workflow that runs `pytest` and, on a schedule or label, `pytest -m perf` (read-only token, actions pinned by SHA). FR-16 and the NFR-03 gate are only enforced locally.
-- **P1 Open the PR for branch `corpus/realworld-runner`** (it will warn: it touches docs, rules and the corpus; it should not touch the scanner workflow). Push is waiting for your say.
+- **Done 2026-11-09: GitHub's default `pull_request_target` block.** GitHub will block `pull_request_target` in public repositories by default from **2026-12-02** (a brownout on 2026-11-09 gave `startup_failure` on PRs #3 and #4; failed-at-startup runs cannot be re-run, only a new push or reopen starts one). A repository Actions policy (id 12534, Settings > Actions > Policies) now allows only `pull_request_target`, only for `.github/workflows/pr-scan.yml`. **Not yet confirmed** that the path format matches and that it suppresses the default block: check the first PR scan after 2026-12-02. Adopter docs must tell every adopter to create the same policy.
+- **P2 Our own scan flags our own tests.** Attack-like literals in Python test files are, to the scanner, attack-like code; PR #3 was blocked on its first scan. Fixed for the new code by `tests/fixtures/snippets.txt` (data files are not read by `EXEC-DROPPER`); `tests/test_snippets.py` keeps listed files clean when scanned whole. Still inline, so edits near those lines will be flagged: `test_cli.py`, `test_rules_hooks.py`, the older half of `test_rules_dropper.py`, and `src/pr_scanner/rules/dropper.py` (its own regexes). Tests are never exempt from scanning: CI runs them.
+- **P1 CI for this repository's own tests: PR #4** (`tests.yml`, hash-pinned packages, passed on GitHub). After merge: make `tests` a required status check (branch protection change, ask first).
+- **PR #3 open** for branch `corpus/realworld-runner`. Merge needs the owner (code-owner gate).
 - **P2 Fresh real-world sample** after the next rule fixes (the current one is no longer independent for tuned rules).
 - **P2 Visual check of the Checks tab.** Only the API was read. Confirm the summary renders, the `<!-- x -->` annotation path shows as text, and `neutral` (WARN) and `action_required` (INCOMPLETE) look right.
 - **P2 Confirm the conclusion mapping:** WARN is `neutral` (passes required checks), INCOMPLETE is `action_required`, BLOCK and ERROR are `failure`.
@@ -108,14 +111,15 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 ## Session log
 - **Session 1 (2026-11-02):** docs, threat model, engine, parser, 10 rules, corpus.
 - **Session 2:** GitHub client and fetcher (fakes only).
+- **Session 4 (2026-11-09, evening):** pushed PR #3, opened PR #4 (CI); diagnosed the `pull_request_target` brownout and added the Actions policy; moved attack-like test literals to a fixture file after our own scan blocked PR #3.
 - **Session 3 (2026-11-09):** wired incomplete fetches into the verdict; reporter with escaping (verified on real GitHub); ADR-0005; `report_io`, `scan`, `report`, publisher; the workflow, rehearsed on a fork; `SCANNER-TAMPER` (found by the rehearsal); CODEOWNERS and branch protection; first real PRs through this repo; real-world runner and the 800-PR measurement; `EXEC-DROPPER` bundle fix; documentation refresh.
 
 ## How to resume
 ```
-cd pr_scanner && git checkout corpus/realworld-runner      # local only, see "Not pushed"
+cd pr_scanner && git checkout main && git pull          # after PRs #3 and #4 are merged
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m pytest                                  # 835 tests
+.venv/bin/python -m pytest                                  # 839 tests on this branch
 .venv/bin/python -m pytest -m perf                          # 24 slow tests, about 2.5 min
 .venv/bin/python -m pr_scanner.corpus corpus                # in-repo corpus metrics
 ```
-Suggested order: open the PR for the branch, add CI that runs the tests (C), fix `CI-INJECT` and `CI-SECRETS` (A), optimise `EXEC-DROPPER` and raise the byte cap (B), take a fresh real-world sample, then start the real-attack corpus (E).
+Suggested order: merge #3 and #4, make `tests` a required check, fix `CI-INJECT` and `CI-SECRETS` in separate PRs (A), optimise `EXEC-DROPPER` and raise the byte cap (B), take a fresh real-world sample (new repos welcome), then start the real-attack corpus (E).
