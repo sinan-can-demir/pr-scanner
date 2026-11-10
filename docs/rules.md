@@ -8,6 +8,7 @@ Each rule maps to a threat in [04](04-threat-model.md) and a requirement in [02]
 | `HOOK-PYSETUP` | T-D01, T-D02 | FR-04 | `setup.py` |
 | `HOOK-PYBACKEND` | T-D01 | FR-04 | `pyproject.toml` |
 | `EXEC-DROPPER` | T-D16, T-D17 | FR-20, FR-21 | source files, build scripts, `setup.py` |
+| `EXEC-OBFUSCATED` | T-D07, T-D16 | FR-06 | source files, build scripts, `setup.py`, autotools/cmake files (`.m4`, `.ac`, `.am`, `.cmake`...) |
 | `CI-PRT` | T-D03 | FR-05 | `.github/workflows/*`, `.github/actions/*/action.yml` |
 | `CI-UNPINNED` | T-D03 | FR-05 | same |
 | `CI-PERMS` | T-D03 | FR-05 | same |
@@ -65,6 +66,21 @@ Known limits:
 - Only added lines: if the downloader already exists and the PR adds only the spawn, it is missed.
 - Expected false positives: legitimate installers that fetch a prebuilt binary and run it (esbuild/puppeteer-style postinstall scripts) will block under the default policy. These need a reviewed suppression (FR-11).
 - The description of the original incident is approximate; refine the fixtures when real details are available.
+
+## EXEC-OBFUSCATED
+Added after the first real-attack recall run (`docs/recall-real-attacks.md`) missed two techniques seen in xz and event-stream: a payload hidden in data that is decoded or decrypted and then run from memory or through a shell, with no download and no process-spawn call.
+
+Signal (one file, added lines): a **decode** primitive (`base64`, `atob`, `fromhex`, `createDecipher`, `zlib.decompress`, `xz -d`, `openssl enc`, `xxd -r`...) near an **execute** primitive (`eval(`/`exec(`, `new Function(`, `Module._compile(`, `vm.run*`, shell `eval "..."`, `source <(...)`, a pipe into `sh`/`bash`). Distance is counted in code lines; blank and comment lines are free.
+
+| Severity | When |
+|---|---|
+| Critical | High case, and the file also checks the CI environment |
+| High | both signals on the same line or within 5 code lines |
+| Medium | within 12 code lines |
+| Low | file has more than 100,000 code characters (bundles: both primitives co-occur by accident); informational |
+| none | one signal alone; comments; `regex.exec()`; `exec(open("_version.py").read())` (a file that is itself in the repo, the common `setup.py` version idiom) |
+
+Known limits: same file only; added lines only; payloads in binary files or tarballs outside git are invisible to any diff rule; decoding or execution built from strings or dynamic lookups is not seen; the decode keyword list is not complete (a custom cipher is not a keyword). Cost is linear, about 2 s per MB like `EXEC-DROPPER`; five hostile payloads were added to `tests/test_rules_perf.py`.
 
 ## CI workflow rules (FR-05)
 **Primer:** a GitHub Actions workflow runs on GitHub's machines, often with secrets and a write-capable token, so a PR that edits a workflow can be more dangerous than one that edits source code. These rules read only *added* lines, ignore comments, and only treat the repository-root `.github/` as real (a nested `vendor/.github/workflows/` is not executed by GitHub).

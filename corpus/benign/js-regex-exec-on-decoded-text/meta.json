@@ -1,0 +1,7 @@
+{
+  "description": "RegExp.exec on decoded text is not code execution",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "EXEC-OBFUSCATED"
+  ]
+}

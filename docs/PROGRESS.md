@@ -4,13 +4,13 @@ Last updated: 2026-11-09, session 4. Resume here.
 
 ## Where we are
 
-Runs end to end as a GitHub Action: live on this repository, rehearsed on a throwaway fork. 11 rules, 852 default tests plus 24 `perf`-marked tests (`pytest -m perf`, about 2.5 minutes). Everything is Python standard library only.
+Runs end to end as a GitHub Action: live on this repository, rehearsed on a throwaway fork. 12 rules, 869 default tests plus 29 `perf`-marked tests (`pytest -m perf`, about 2.5 minutes). Everything is Python standard library only.
 
 | Area | State |
 |---|---|
 | Docs, threat model, ADRs 0001-0005 | Done and current. ADR-0002 (Python) is still **provisional**. |
 | Engine, policy, diff parser, classifier | Done. Fail-safe: errors and partial scans never pass. Caps: 1000 files, 5 MiB added, 1,000,000 chars per line, 60 s. |
-| Rules (11) | `HOOK-NPM`, `HOOK-PYSETUP`, `HOOK-PYBACKEND`, `EXEC-DROPPER`, `CI-PRT`, `CI-UNPINNED`, `CI-PERMS`, `CI-SECRETS`, `CI-PIPE-SH`, `CI-INJECT`, `SCANNER-TAMPER`. See `docs/rules.md`. |
+| Rules (12) | `EXEC-OBFUSCATED` (new, see `docs/recall-real-attacks.md`), `HOOK-NPM`, `HOOK-PYSETUP`, `HOOK-PYBACKEND`, `EXEC-DROPPER`, `CI-PRT`, `CI-UNPINNED`, `CI-PERMS`, `CI-SECRETS`, `CI-PIPE-SH`, `CI-INJECT`, `SCANNER-TAMPER`. See `docs/rules.md`. |
 | In-repo corpus | 28 malicious, 28 benign. Written with the rules, so 100% recall is a sanity check, not evidence. Two cases are real diffs. |
 | Fetcher | Done, GET-only. Exercised on 800 real PRs. |
 | Reporter, `report_io`, `publisher`, `cli` | Done. Escaping verified against GitHub's real renderer. Trust model in ADR-0005. |

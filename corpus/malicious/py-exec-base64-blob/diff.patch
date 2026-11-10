@@ -1,0 +1,11 @@
+diff --git a/src/pkg/_compat.py b/src/pkg/_compat.py
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/src/pkg/_compat.py
+@@ -0,0 +1,5 @@
++import base64
++_B = "aW1wb3J0IG9z"
++def _init():
++    exec(compile(base64.b64decode(_B), "<x>", "exec"), {})
++_init()
