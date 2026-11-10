@@ -14,7 +14,7 @@ Runs end to end as a GitHub Action: live on this repository, rehearsed on a thro
 | In-repo corpus | 28 malicious, 28 benign. Written with the rules, so 100% recall is a sanity check, not evidence. Two cases are real diffs. |
 | Fetcher | Done, GET-only. Exercised on 800 real PRs. |
 | Reporter, `report_io`, `publisher`, `cli` | Done. Escaping verified against GitHub's real renderer. Trust model in ADR-0005. |
-| Action workflow | `.github/workflows/pr-scan.yml`: `pull_request_target`, two jobs, scanner pinned by SHA (currently `f2af846`). 18 property tests guard it. |
+| Action workflow | `.github/workflows/pr-scan.yml`: `pull_request_target`, two jobs, scanner pinned by SHA (currently `4963b36`, main after #7: includes the `EXEC-DROPPER` bundle fix). 18 property tests guard it. |
 | Protection of this repo | Branch protection and CODEOWNERS applied (`docs/branch-protection.md`). Since 2026-11-09: 0 approvals, `PR scanner` required, **enforced on admins**, so no merge skips the scan. |
 | Real-world runner | `python -m pr_scanner.realworld`, plus data in `realworld/`. |
 | CI | `.github/workflows/tests.yml` runs the default suite on every PR and push to `main`, `pytest -m perf` weekly and on demand. Packages pinned by hash. 12 property tests guard it. **Not yet a required check.** |
