@@ -1,0 +1,11 @@
+{
+  "description": "postinstall bundle sends npm/GitHub tokens out and republishes the package with the same hook",
+  "threat": "T-D01",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "HOOK-NPM"
+  ],
+  "provenance": "reconstructed from public analysis",
+  "reference": "GHSA-qjqf-7j6f-82c4",
+  "note": ""
+}

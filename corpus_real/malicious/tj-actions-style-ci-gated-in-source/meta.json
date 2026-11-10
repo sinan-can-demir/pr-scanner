@@ -1,0 +1,11 @@
+{
+  "description": "Same technique in src/ with a plain readable layout (control for the dist/ case)",
+  "threat": "T-D01",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER"
+  ],
+  "provenance": "reconstructed",
+  "reference": "GHSA-mrrh-fwg8-r2c3",
+  "note": ""
+}

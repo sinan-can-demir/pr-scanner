@@ -1,0 +1,11 @@
+{
+  "description": "Action source downloads a python script, runs it with sudo, prints the secrets double-base64 encoded into the public log",
+  "threat": "T-D01",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER"
+  ],
+  "provenance": "reconstructed from public analysis (original commit removed from GitHub: API 422)",
+  "reference": "GHSA-mrrh-fwg8-r2c3; tj-actions/changed-files#2463",
+  "note": ""
+}

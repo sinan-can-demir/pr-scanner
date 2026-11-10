@@ -1,0 +1,11 @@
+{
+  "description": "Only binary test files modified; payload is opaque inside them",
+  "threat": "T-D16",
+  "expect_outcome": "warn",
+  "expect_rules": [
+    "BINARY-IN-TESTS"
+  ],
+  "provenance": "real structure (git shows no text patch)",
+  "reference": "tukaani-project/xz@6e636819e8; GHSA-rxwq-x6h5-x525",
+  "note": "Expected structural miss: no rule looks at binaries; the scanner cannot see inside them."
+}

