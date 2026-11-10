@@ -1,0 +1,177 @@
+{
+ "labels": {
+  "BurntSushi/ripgrep#3495": {
+   "cause": "CI-PERMS Medium on 'id-token: write' (the recommended OIDC publishing setup)",
+   "label": "noise"
+  },
+  "BurntSushi/ripgrep#3554": {
+   "cause": "third-party action on a mutable branch (@master); risky practice, benign PR",
+   "label": "rule-correct"
+  },
+  "BurntSushi/ripgrep#3565": {
+   "cause": "third-party action pinned by tag, not SHA (CI-UNPINNED Medium)",
+   "label": "rule-correct"
+  },
+  "actions/cache#1035": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "actions/cache#1630": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "actions/cache#1695": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "actions/cache#1699": {
+   "cause": "CI-SECRETS: GITHUB_TOKEN sent to api.github.com (wrong, the no-space '}}' spelling and host are not recognised); a PagerDuty token to PagerDuty's API is arguable",
+   "label": "false-positive"
+  },
+  "actions/cache#1760": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "actions/checkout#2499": {
+   "cause": "third-party action pinned by tag, not SHA (CI-UNPINNED Medium)",
+   "label": "rule-correct"
+  },
+  "actions/setup-node#1574": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "django/django#22222": {
+   "cause": "INCOMPLETE: file-count check is two-sided; renames show as delete plus add so the diff has more files than GitHub reports",
+   "label": "fetcher-bug"
+  },
+  "docker/build-push-action#1592": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "docker/build-push-action#1594": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "docker/build-push-action#1595": {
+   "cause": "CI-PERMS Medium on 'id-token: write' (the recommended OIDC publishing setup)",
+   "label": "noise"
+  },
+  "docker/build-push-action#1613": {
+   "cause": "INCOMPLETE: bundle adds 8-9 MiB, over the 5 MiB cap",
+   "label": "limit"
+  },
+  "docker/build-push-action#1614": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "docker/build-push-action#1617": {
+   "cause": "INCOMPLETE: bundle adds 8-9 MiB, over the 5 MiB cap",
+   "label": "limit"
+  },
+  "docker/build-push-action#1618": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "docker/build-push-action#1620": {
+   "cause": "INCOMPLETE: bundle adds 8-9 MiB, over the 5 MiB cap",
+   "label": "limit"
+  },
+  "docker/build-push-action#1621": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "docker/build-push-action#1641": {
+   "cause": "CI-PERMS Medium on 'id-token: write' (the recommended OIDC publishing setup)",
+   "label": "noise"
+  },
+  "evanw/esbuild#4319": {
+   "cause": "CI-PERMS Medium on 'id-token: write' (the recommended OIDC publishing setup)",
+   "label": "noise"
+  },
+  "expressjs/express#7464": {
+   "cause": "CI-PERMS Medium on 'id-token: write' (the recommended OIDC publishing setup)",
+   "label": "noise"
+  },
+  "expressjs/express#7465": {
+   "cause": "CI-PERMS Medium on 'id-token: write' (the recommended OIDC publishing setup)",
+   "label": "noise"
+  },
+  "github/codeql-action#4275": {
+   "cause": "INCOMPLETE: more than 50 workflow files to read for context",
+   "label": "limit"
+  },
+  "github/codeql-action#4280": {
+   "cause": "INCOMPLETE: more than 50 workflow files to read for context",
+   "label": "limit"
+  },
+  "github/codeql-action#4286": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "github/codeql-action#4291": {
+   "cause": "EXEC-DROPPER on compiled JS-action bundle (dist/ or lib/); fixed in 0e55018, now LOW plus INCOMPLETE from the 5 MiB cap",
+   "label": "false-positive"
+  },
+  "github/codeql-action#4299": {
+   "cause": "INCOMPLETE: more than 50 workflow files to read for context",
+   "label": "limit"
+  },
+  "github/codeql-action#4304": {
+   "cause": "INCOMPLETE: more than 50 workflow files to read for context",
+   "label": "limit"
+  },
+  "grafana/grafana#136560": {
+   "cause": "SCANNER-TAMPER Medium on a routine CODEOWNERS addition (by design, but noisy in busy repos)",
+   "label": "noise"
+  },
+  "grafana/grafana#136682": {
+   "cause": "SCANNER-TAMPER Medium on a routine CODEOWNERS addition (by design, but noisy in busy repos)",
+   "label": "noise"
+  },
+  "home-assistant/core#145302": {
+   "cause": "SCANNER-TAMPER Medium on a routine CODEOWNERS addition (by design, but noisy in busy repos)",
+   "label": "noise"
+  },
+  "home-assistant/core#191154": {
+   "cause": "SCANNER-TAMPER Medium on a routine CODEOWNERS addition (by design, but noisy in busy repos)",
+   "label": "noise"
+  },
+  "microsoft/playwright#43979": {
+   "cause": "CI-PERMS Medium on 'id-token: write' (the recommended OIDC publishing setup)",
+   "label": "noise"
+  },
+  "numpy/numpy#33227": {
+   "cause": "CI-INJECT on a concurrency.group key, which no shell evaluates",
+   "label": "false-positive"
+  },
+  "prebuild/prebuild-install#161": {
+   "cause": "INCOMPLETE: head fork deleted after merge, workflow context unreadable; does not happen on live PRs",
+   "label": "sampling-artifact"
+  },
+  "psf/requests#6968": {
+   "cause": "id-token: write plus slsa-github-generator by tag (the project requires a tag, not a SHA)",
+   "label": "noise"
+  },
+  "psf/requests#7005": {
+   "cause": "INCOMPLETE: head fork deleted after merge, workflow context unreadable; does not happen on live PRs",
+   "label": "sampling-artifact"
+  },
+  "pypa/setuptools#5356": {
+   "cause": "CI-SECRETS: 'secrets: inherit' to a reusable workflow",
+   "label": "defensible"
+  },
+  "rust-lang/cargo#17703": {
+   "cause": "CI-PERMS Medium on 'id-token: write' (the recommended OIDC publishing setup)",
+   "label": "noise"
+  },
+  "webpack/webpack#23193": {
+   "cause": "INCOMPLETE: thousands of files, over the engine caps",
+   "label": "correct"
+  },
+  "webpack/webpack#23217": {
+   "cause": "INCOMPLETE: thousands of files, over the engine caps",
+   "label": "correct"
+  }
+ },
+ "note": "Hand-labelled by reading the evidence on 2026-11-09. 'false-positive' means the flag was wrong; 'rule-correct' means the rule did what it says on a benign PR; 'noise' is correct-by-design but not useful; none of these PRs is malicious."
+}

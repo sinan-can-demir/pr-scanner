@@ -40,7 +40,11 @@ flowchart TB
 | Rule pack | Rules grouped by domain: hooks, ci, obfuscation, deps, exfil | FR-04..08 |
 | Policy and Verdict | Severity to verdict; suppressions; config | FR-11, FR-12, FR-14 |
 | LLM Triage | Optional, redacted context only; cannot lower severity | FR-13, T-S02 |
-| Reporter | Check run, annotations, summary | FR-09, FR-10 |
+| Reporter | Check run, annotations, summary (`reporter.py`): all PR-derived text escaped, hidden characters shown as markers, size caps | FR-09, FR-10, T-S05 |
+| Report hand-over | `report_io.py` serialises the report and validates it as untrusted input in the privileged job (closed schema, limits, event SHA wins, Markdown invariants re-checked) | ADR-0005 |
+| Publisher | `publisher.py`: the only write path, one endpoint, no retry, token never in output | NFR-04, NFR-08 |
+| CLI | `cli.py`: `scan` (unprivileged) and `report` (privileged); every failure becomes an ERROR report | NFR-08 |
+| Real-world runner | `realworld.py`: samples merged PRs, scans them, reports outcome rates with intervals (measurement tool, not part of the Action) | NFR-03 |
 | Audit store | Append-only scan records | FR-15 |
 
 ## Data flow and trust boundaries
@@ -61,10 +65,31 @@ flowchart LR
 1. PR data is **inert text**: never passed to `eval`, shell, import, package manager or template engines.
 2. Config and rules are read from the **base branch**, not the PR head, so a PR cannot weaken its own scan (T-S06).
 3. Results are bound to the **head SHA** (T-S13).
-4. Privileged operations (posting checks) are separated from analysis; analysis has a read-only token.
+4. Privileged operations (posting checks) are separated from analysis; analysis has a read-only token. The two run as separate jobs and the privileged job treats the analysis job's output as untrusted (ADR-0005).
 5. Every rule is a pure function: `(NormalisedDiff, Context) -> list[Finding]`.
-6. Failures propagate as explicit `ScanError`, mapped to a non-success check (NFR-08).
+6. Failures never become a pass: engine errors, fetch errors, a moved head, a missing or rejected report all map to a failing or `action_required` check (NFR-08). `INCOMPLETE` is `action_required`, `BLOCK` and `ERROR` are `failure`, `WARN` is `neutral`.
+7. The workflow runs from the **base branch** (`pull_request_target`) so a PR cannot edit or disable it, and it never checks out or runs PR code. A merged change to the workflow, `.pr-scanner.yml` or CODEOWNERS is flagged by `SCANNER-TAMPER` and held by CODEOWNERS plus branch protection.
+8. Everything shown to a human or to GitHub that came from a PR is escaped first, and hand-written reports are rejected.
 
-## Deployment options
-- **v1:** GitHub Action (composite/Docker), runs on `pull_request`; forks get read-only token and a separate `workflow_run` job posts sanitised results.
-- **Later:** GitHub App service for org-wide installs and central audit.
+## Deployment
+**v1 (built, ADR-0005):** a GitHub Actions workflow in the repository, triggered by `pull_request_target` so GitHub runs the file from the base branch. Two jobs:
+
+```mermaid
+flowchart LR
+  EV[pull_request_target event] --> W[workflow file from BASE branch]
+  W --> S
+  subgraph scan[scan job: contents read, pull-requests read]
+    S[pr_scanner scan] -->|GET only| GH[(GitHub API)]
+    S --> RJ[report.json]
+  end
+  RJ -->|artifact, 1 day| V
+  subgraph report[report job: checks write only]
+    V[parse_report: untrusted input] --> P[publisher: POST check-runs]
+  end
+  P --> GH
+```
+A missing, unreadable or rejected `report.json` becomes a fixed failing check on the event's commit. Only the check named **"PR scanner"** should be required in branch protection (`docs/branch-protection.md`).
+
+**Rejected alternative:** `pull_request` plus a `workflow_run` reporter. The PR's own workflow file runs in that design, so a PR can forge the artifact the privileged job trusts.
+
+**Later:** a GitHub App for org-wide installs, central audit and suppressions. Not built.

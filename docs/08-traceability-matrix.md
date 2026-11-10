@@ -4,7 +4,7 @@ Test types: U unit, P property, C corpus, I integration, A adversarial, F fuzz, 
 
 | Requirement | Use cases | Threats addressed | Planned tests |
 |---|---|---|---|
-| FR-01 | UC-01 | T-S08 | I (event fixtures), U |
+| FR-01 | UC-01 | T-S08 | I (event fixtures), U; implemented as `pull_request_target` with types opened, synchronize, reopened (`tests/test_workflow_file.py`); event fixtures for other triggers not applicable to an Action |
 | FR-02 | UC-01 | T-S04 | S, I (tests/test_github_client.py, test_fetcher.py, test_fetcher_engine.py) |
 | FR-03 | UC-01, UC-05 | n/a | U, I |
 | FR-04 | UC-01 | T-D01 | U, C, A (implemented: HOOK-NPM, HOOK-PYSETUP, HOOK-PYBACKEND; see rules.md) |
@@ -12,27 +12,27 @@ Test types: U unit, P property, C corpus, I integration, A adversarial, F fuzz, 
 | FR-06 | UC-01 | T-D02, T-D09, T-D10, T-D13 | U, C, A, F |
 | FR-07 | UC-01 | T-D04, T-D05, T-D06 | U, C |
 | FR-08 | UC-01 | T-D07, T-D13 | U, C |
-| FR-09 | UC-01, UC-02 | n/a | I, E2E |
-| FR-10 | UC-02, UC-07 | n/a | U (schema), P |
+| FR-09 | UC-01, UC-02 | n/a | I, E2E (implemented: `tests/test_reporter.py`, `test_report_io.py`, `test_publisher.py`, `test_cli.py`; rehearsed in Actions on a fork; the Checks tab was read through the API, not visually) |
+| FR-10 | UC-02, UC-07 | n/a | U (schema), P (implemented: reporter property test over arbitrary text) |
 | FR-11 | UC-03 | T-S07 | U, I |
-| FR-12 | UC-04 | T-S06, T-D12 | U, FI |
+| FR-12 | UC-04 | T-S06, T-D12 | U, FI (partial: SCANNER-TAMPER flags changes to the scanner workflow, `.pr-scanner.yml` and CODEOWNERS; reading policy from a config file is not built) |
 | FR-13 | UC-01 | T-S02 | U, A, P (monotonic) |
 | FR-14 | UC-01 | n/a | U (table), P |
 | FR-15 | UC-08 | T-S07 | I |
-| FR-16 | UC-05 | T-S09 | S (CI check) |
+| FR-16 | UC-05 | T-S09 | S (test exists, `tests/test_corpus.py`; run in CI by `.github/workflows/tests.yml`) |
 | FR-17 | UC-01 | T-D11 | U |
 | FR-18 | UC-01, UC-02 | T-D15, T-S14 | U, C (incident-modelled thread fixture) |
 | FR-19 | UC-02, UC-03 | T-S14, T-S07 | U, I |
 | FR-20 | UC-01 | T-D16, T-D17 | U, C (7 malicious + 5 benign fixtures), A |
 | FR-21 | UC-01 | T-D17 | U, C |
-| NFR-01 | UC-01 | T-S04 | S, review |
+| NFR-01 | UC-01 | T-S04 | S, review (implemented: AST check over the modules that touch PR data, `tests/test_cli.py`) |
 | NFR-02 | UC-01 | T-S03 | Perf (tests/test_rules_perf.py, marker `perf`) |
-| NFR-03 | UC-01, UC-05 | T-S12 | C (gate) |
-| NFR-04 | UC-06 | T-S05 | S, review |
+| NFR-03 | UC-01, UC-05 | T-S12 | C (gate on the in-repo corpus; real-world false-positive measurement via `pr_scanner.realworld`, see Progress) |
+| NFR-04 | UC-06 | T-S05 | S, review (implemented: per-job permissions asserted in `tests/test_workflow_file.py`; tokens scrubbed before truncation, `tests/test_github_client.py`, `test_publisher.py`) |
 | NFR-05 | UC-06 | T-S05, T-S10 | I (egress test) |
 | NFR-06 | UC-01 | T-S03 | F, Perf, FI |
 | NFR-07 | UC-01 | n/a | P |
-| NFR-08 | UC-01 | T-S06 | FI |
+| NFR-08 | UC-01 | T-S06 | FI (implemented: engine, fetcher, scan command and report command fault tests) |
 | NFR-09 | UC-05 | n/a | Contributor dry run |
 | NFR-10 | UC-05 | T-S09 | S |
 | NFR-11 | UC-01 | T-S01, T-S02 | A |

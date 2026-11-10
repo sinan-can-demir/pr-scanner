@@ -1,34 +1,37 @@
 # Branch protection for this repository
 
 `SCANNER-TAMPER` flags a change that disables, replaces or weakens the scanner, but a flag is only a
-warning to a maintainer. These settings make it binding: no change to the scanner's workflow, policy or
-ownership files merges without an owner, and the scan result itself cannot be bypassed by another app.
+warning to a maintainer. These settings make it binding: no change merges without passing the scan (the owner
+included), and the scan result itself cannot be faked by another app.
 
-## Recommended settings for `main` (solo maintainer)
+## Settings for `main` (solo maintainer, applied 2026-11-09)
 
 | Setting | Value | Why |
 |---|---|---|
-| Require a pull request before merging | on, **1 approval** | nothing reaches `main` unreviewed |
-| Require review from Code Owners | on | `.github/CODEOWNERS` lists the workflow, policy and privileged code paths |
-| Dismiss stale approvals on new commits | on | an approval must not survive a push (T-S13) |
+| Require a pull request before merging | on, **0 approvals** | every change goes through a PR and its scan; see "Why 0 approvals" |
+| Require review from Code Owners | off while solo | the only code owner is the author, who cannot approve their own PR |
+| Dismiss stale approvals on new commits | on | takes effect once approvals are required again (T-S13) |
 | Require status checks | `PR scanner`, **pinned to the GitHub Actions app (id 15368)** | another app or a hand-made status cannot satisfy it |
 | Require branches to be up to date | off | avoids needless re-scans for a small project |
 | Block force pushes, block deletion | on | history cannot be rewritten to hide a change |
-| Include administrators (`enforce_admins`) | **off** | see the trade-off below |
+| Include administrators (`enforce_admins`) | **on** | nobody, the owner included, can merge past the scan |
 
 Only **"PR scanner"** should be required. The job-level checks `scan` and `report` also appear on each PR
 and are implementation details.
 
-## The trade-off you must choose
+## Why 0 approvals while solo
 
-GitHub never lets you approve your own pull request. With one maintainer:
+GitHub never lets you approve your own pull request. The first setup (1 code-owner approval, admins may
+bypass) could never be satisfied by the only maintainer, so every merge used the admin override, and **the
+override skips every rule, including the required scan**. Requiring no approval but enforcing the rules on
+admins makes the scan binding for everyone, which is the point of this repository.
 
-* **Admins can bypass (recommended while solo).** You can merge your own work with the admin override, and
-  contributors are fully held to the rules. The protection is real for everyone except you, so guard your
-  own account (hardware key or passkey, no token with `repo` scope lying around).
-* **Admins cannot bypass.** Strongest, but you cannot merge your own pull requests until a second
-  maintainer or account exists to approve them. Move here as soon as there is a second owner; add them to
-  `CODEOWNERS` in the same change.
+Trade-off: if the scanner itself cannot run (for example GitHub's `pull_request_target` brownout on
+2026-11-09), nothing can merge. Turning `enforce_admins` off for that one merge is a deliberate, visible
+step in Settings > Branches; turn it back on afterwards.
+
+When a second maintainer exists: set approvals to 1, turn Code Owner review back on, and add them to
+`CODEOWNERS` in the same change.
 
 ## Applying it
 
@@ -36,10 +39,10 @@ GitHub never lets you approve your own pull request. With one maintainer:
 gh api -X PUT repos/OWNER/REPO/branches/main/protection --input - <<'JSON'
 {
   "required_status_checks": {"strict": false, "checks": [{"context": "PR scanner", "app_id": 15368}]},
-  "enforce_admins": false,
+  "enforce_admins": true,
   "required_pull_request_reviews": {
-    "required_approving_review_count": 1,
-    "require_code_owner_reviews": true,
+    "required_approving_review_count": 0,
+    "require_code_owner_reviews": false,
     "dismiss_stale_reviews": true
   },
   "restrictions": null,
