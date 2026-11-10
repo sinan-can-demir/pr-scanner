@@ -28,7 +28,7 @@ Prove that the scanner (1) detects what it claims, (2) stays quiet on benign cha
 
 ## Metrics and gates (CI)
 - Per-rule and overall precision/recall printed on every run. Real-world rates are reported with 95% Wilson intervals, because zero observed is not zero risk.
-- **There is no CI workflow that runs this repository's tests yet** (known gap, see Progress); the gates above are enforced locally.
+- CI (`.github/workflows/tests.yml`) runs the default suite on every pull request and push to `main`, and the `perf` tests weekly and on demand. It is not yet a required status check (see Progress).
 - Gate: recall >= 95% on Must-rule malicious corpus; blocked-benign <= 2% (NFR-03).
 - Coverage target: 90% line / 80% branch on core; mutation score tracked, not gated initially.
 - No test may require network except explicitly marked e2e.

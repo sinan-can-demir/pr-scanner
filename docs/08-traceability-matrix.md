@@ -19,7 +19,7 @@ Test types: U unit, P property, C corpus, I integration, A adversarial, F fuzz, 
 | FR-13 | UC-01 | T-S02 | U, A, P (monotonic) |
 | FR-14 | UC-01 | n/a | U (table), P |
 | FR-15 | UC-08 | T-S07 | I |
-| FR-16 | UC-05 | T-S09 | S (test exists, `tests/test_corpus.py`; no CI workflow runs it yet) |
+| FR-16 | UC-05 | T-S09 | S (test exists, `tests/test_corpus.py`; run in CI by `.github/workflows/tests.yml`) |
 | FR-17 | UC-01 | T-D11 | U |
 | FR-18 | UC-01, UC-02 | T-D15, T-S14 | U, C (incident-modelled thread fixture) |
 | FR-19 | UC-02, UC-03 | T-S14, T-S07 | U, I |
