@@ -1,0 +1,11 @@
+{
+  "description": "postinstall runs a script that reads credential files, spawns AI CLIs in permissive mode, posts env + results out",
+  "threat": "T-D01",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "HOOK-NPM"
+  ],
+  "provenance": "reconstructed from public analysis",
+  "reference": "GHSA-cxm3-wv7p-598c",
+  "note": ""
+}

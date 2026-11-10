@@ -1,0 +1,11 @@
+{
+  "description": "One-line dependency on a new, unknown package whose code is the payload",
+  "threat": "T-D12",
+  "expect_outcome": "warn",
+  "expect_rules": [
+    "DEP-NEW-UNKNOWN"
+  ],
+  "provenance": "real structure (event-stream added flatmap-stream as a dependency)",
+  "reference": "dominictarr/event-stream#116; GHSA-9x64-5r7x-2q53",
+  "note": "Expected structural miss: no rule on new dependencies; needs registry reputation data."
+}

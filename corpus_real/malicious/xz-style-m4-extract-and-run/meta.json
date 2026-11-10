@@ -1,0 +1,11 @@
+{
+  "description": "Build macro pipes bytes of a test file through tr and xz into sh, skipped when CI is set",
+  "threat": "T-D16",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER"
+  ],
+  "provenance": "reconstructed from public analysis (the real m4 was in release tarballs, not git)",
+  "reference": "GHSA-rxwq-x6h5-x525",
+  "note": ""
+}

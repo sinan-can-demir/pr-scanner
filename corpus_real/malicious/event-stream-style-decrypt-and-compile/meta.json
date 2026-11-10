@@ -1,0 +1,11 @@
+{
+  "description": "Module decrypts a blob with a key taken from the parent package metadata and compiles it, only for one target",
+  "threat": "T-D07",
+  "expect_outcome": "block",
+  "expect_rules": [
+    "EXEC-DROPPER"
+  ],
+  "provenance": "reconstructed from public analysis",
+  "reference": "GHSA-9x64-5r7x-2q53",
+  "note": ""
+}
