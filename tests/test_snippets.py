@@ -29,7 +29,7 @@ def test_the_fixture_file_is_not_a_kind_the_dropper_rule_reads():
 # Not yet listed, because they still carry attack-like literals inline (backlog): test_cli.py,
 # test_rules_hooks.py, the older half of test_rules_dropper.py, and the rule source
 # pr_scanner/rules/dropper.py itself. Edits near those literals will be flagged by our own scan.
-SELF_SCAN_CLEAN = ["test_snippets.py", "snippets.py"]
+SELF_SCAN_CLEAN = ["test_realworld.py", "test_snippets.py", "snippets.py"]
 
 
 def test_listed_test_files_do_not_trip_our_own_scanner():
