@@ -1,6 +1,6 @@
 # Progress log
 
-Last updated: 2026-11-09, session 4. Resume here.
+Last updated: 2026-11-10, session 5. Resume here.
 
 ## Where we are
 
@@ -40,6 +40,24 @@ Of the 15 blocks, **14 were false positives** (about 1.75%, CI 1.0 to 2.9%): 12 
 
 After the bundle fix (`0e55018`, local), a re-scan of the 27 flagged PRs: the 12 bundle blocks no longer block (`EXEC-DROPPER` is LOW) but become INCOMPLETE because those bundles add 5 to 11 MiB, over the engine's 5 MiB cap. **Do not quote the 1.9% as current**, and do not reuse this sample as independent evidence for `EXEC-DROPPER`.
 
+## Fresh real-world sample (684 PRs from 35 new repos, 2026-11-10, scanner at `e95f51e`)
+Data and hand labels: `realworld/*-2026-11-10.json`. None of these repos were in the first sample, and no rule was tuned on them. All PRs are presumed benign, so this measures false positives and noise only, **not recall**. Evidence snippets are not stored. Chosen to cover what the first sample lacked: `setup.py`/packaging, autotools and C (xz, libuv), shell (nvm, pyenv, ohmyzsh, Homebrew), install-script and bundle-heavy JS.
+
+| Outcome | PRs | Rate | 95% CI |
+|---|---|---|---|
+| Pass | 646 | 94.4% | 92.5 to 95.9% |
+| Warn | 16 | 2.3% | 1.4 to 3.8% |
+| Block | 3 | 0.4% | 0.2 to 1.3% |
+| Incomplete | 19 | 2.8% | 1.8 to 4.3% |
+
+Of the 3 blocks, **2 are false positives** (0.29%, CI 0.08 to 1.1%), both `EXEC-DROPPER` High, in two different repos: a build script that downloads *source* tarballs, runs `configure`/`make` and `chmod +x`'s the libraries it built (psycopg2), and a test that spawns `pnpm next dev` and `fetch()`es the local server (tailwindcss). The third (`actions/download-artifact@main` in upload-artifact's own tests) is rule-correct. **NFR-03 (blocked-benign at most 2%) holds on this sample**, with the first sample's caveat: it is presumed-benign merged PRs from well-known projects, and the upper CI bound (1.1%) is still below 2%, but the sample is not a random draw of all PRs.
+
+- **Warns (16):** 10 are `CI-UNPINNED` Medium on tag-pinned `pypa/cibuildwheel` or `docker/setup-qemu-action` in version-bump PRs (new noise class, 2 repos), 5 are `id-token: write` or a CODEOWNERS edit (already in the backlog), 1 is a `pull_request_target` gated on a label (worth a look).
+- **Incomplete (19):** 14 compiled bundles (3.9 to 8.8 MB, `dist/index.cjs`, all from `docker/*` and `actions/*` repos), 1 PR with 1,855 files (over the 1000-file cap), 4 old PRs whose head repository is gone (sampling artifact). The runner does not record *why* a scan was incomplete; checked on one 3.9 MB bundle: incomplete with and without `EXEC-OBFUSCATED`.
+- **`EXEC-OBFUSCATED`:** 10 hits, all LOW on `docker/*` `dist/index.cjs` bundles, so **no change to any outcome and 0 hits on any non-bundle file**. It adds about 50% to scan time on bundles (4.6 s to 7.1 s on a 3.9 MB one), far inside the 60 s budget.
+- **Transport:** 6 PRs first failed with `URLError` (a flaky connection mid-run) and were re-run once; they are counted with their re-run result.
+- **Limits of this evidence:** 10 of the 14 bundle PRs come from 3 related repos, so bundle numbers are not independent draws; 1 reviewer labelled everything and also wrote the rules.
+
 ## Backlog
 Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 
@@ -49,6 +67,8 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 - **P2 `SCANNER-TAMPER` on CODEOWNERS.** Warn only on removals and on additions that can take over (a catch-all line, `.github/`, scanner paths); last matching pattern wins, so those are the dangerous ones.
 - **P2 `CI-PERMS` on `id-token: write`.** The recommended OIDC publishing setup; LOW when it is the only signal.
 - **P3 `CI-UNPINNED`.** `slsa-github-generator` must be referenced by tag; consider a documented exception. Tag pins of first-party actions are already LOW.
+- **P1 `EXEC-DROPPER` false positives found in the fresh sample (2 of 3 blocks).** (a) a build script that downloads *source* and `chmod +x`'s libraries it built; (b) a test that spawns a dev server and `fetch()`es it on localhost. Ideas: ignore a download whose URL or target is `localhost`/`127.0.0.1`; in `.sh` build scripts treat `chmod` of a path not written by the download as not a signal; both need tests first. Do not tune and then quote this sample as evidence.
+- **P2 `CI-UNPINNED` Medium on tag-pinned third-party actions** is now 10 of 16 warns in the fresh sample (cibuildwheel bumps). Consider LOW for well-known publishers or when the PR only changes the version string.
 - **P2 `EXEC-DROPPER` matches shell tool names as identifiers.** `\bcurl\b` and `\bwget\b` fire on a Python variable named `curl`; in non-shell source, require a call or string context. Found when our own scan flagged `curl = snippet(...)` in a test.
 - **P2 `EXEC-DROPPER` limits.** More than 100k code chars of real-looking code between two signals in one new file reduces to LOW (pinned by a test). No cross-file correlation. No "dist changed but source did not" signal. Legitimate binary installers (esbuild, puppeteer, sharp style) are untested: the sample's recent PRs never touched install scripts.
 - **P3 Other rule gaps** (`docs/rules.md`): YAML folded scalars, removed `permissions:` blocks, `format()` taint, dynamic lookups, hand-written reports through unusual tools.

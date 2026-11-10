@@ -1,0 +1,157 @@
+{
+ "labels": {
+  "actions/upload-artifact#719": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "actions/upload-artifact#762": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "actions/upload-artifact#764": {
+   "label": "rule-correct",
+   "cause": "first-party test workflow uses actions/download-artifact@main (mutable branch); risky practice, benign PR. Same call as ripgrep#3554 in the first sample"
+  },
+  "astral-sh/ruff#30275": {
+   "label": "noise",
+   "cause": "id-token: write (OIDC; CI-PERMS Medium), the recommended publishing setup"
+  },
+  "docker/setup-buildx-action#585": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#595": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#600": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#606": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#608": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#609": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#610": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#617": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#618": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#619": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#620": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#624": {
+   "label": "limit",
+   "cause": "compiled bundle (dist/index.cjs, 3.9 to 8.8 MB); incomplete from engine limits (the runner does not record which). Backlog: raise the cap. Incomplete with or without EXEC-OBFUSCATED (checked on docker/setup-buildx-action#619)"
+  },
+  "docker/setup-buildx-action#643": {
+   "label": "noise",
+   "cause": "id-token: write (OIDC; CI-PERMS Medium), the recommended publishing setup"
+  },
+  "fastapi/fastapi#16707": {
+   "label": "limit",
+   "cause": "1855 files, over the 1000-file engine cap (documentation / translation churn)"
+  },
+  "microsoft/TypeScript#65406": {
+   "label": "noise",
+   "cause": "id-token: write (OIDC; CI-PERMS Medium), the recommended publishing setup"
+  },
+  "protocolbuffers/protobuf#31478": {
+   "label": "rule-correct",
+   "cause": "pull_request_target gated on a safe-label check; worth a human look, not malicious"
+  },
+  "psycopg/psycopg2#1755": {
+   "label": "false-positive",
+   "cause": "EXEC-DROPPER High: build script downloads source tarballs, builds them (configure/make) and chmod +x's the libraries it built; no downloaded binary is executed. Same class as the known 'legitimate installer' limit"
+  },
+  "psycopg/psycopg2#1778": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "psycopg/psycopg2#1781": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "psycopg/psycopg2#1802": {
+   "label": "sampling-artifact",
+   "cause": "head repository unavailable or workflow files unreadable at the head commit (deleted or private fork); live PRs are unaffected"
+  },
+  "psycopg/psycopg2#1813": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "psycopg/psycopg2#1819": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "psycopg/psycopg2#1826": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "psycopg/psycopg2#1840": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "psycopg/psycopg2#1848": {
+   "label": "sampling-artifact",
+   "cause": "head repository unavailable or workflow files unreadable at the head commit (deleted or private fork); live PRs are unaffected"
+  },
+  "psycopg/psycopg2#1849": {
+   "label": "sampling-artifact",
+   "cause": "head repository unavailable or workflow files unreadable at the head commit (deleted or private fork); live PRs are unaffected"
+  },
+  "pyca/cryptography#15973": {
+   "label": "noise",
+   "cause": "id-token: write (OIDC; CI-PERMS Medium), the recommended publishing setup"
+  },
+  "pyenv/pyenv#3616": {
+   "label": "noise",
+   "cause": "routine CODEOWNERS edit (SCANNER-TAMPER Medium); already in the backlog"
+  },
+  "sqlalchemy/sqlalchemy#13459": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "sqlalchemy/sqlalchemy#13483": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "sqlalchemy/sqlalchemy#13591": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "sqlalchemy/sqlalchemy#13755": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (pypa/cibuildwheel, docker/setup-qemu-action): version-bump PR; policy finding, benign PR"
+  },
+  "tailwindlabs/tailwindcss#20660": {
+   "label": "false-positive",
+   "cause": "EXEC-DROPPER High: a test spawns 'pnpm next dev' and fetch()es the local dev server it started; download and spawn co-occur by design. Matches the backlog item about tool-name and call matching"
+  },
+  "tukaani-project/xz#67": {
+   "label": "sampling-artifact",
+   "cause": "head repository unavailable or workflow files unreadable at the head commit (deleted or private fork); live PRs are unaffected"
+  }
+ },
+ "note": "Hand labels for every block, warn and incomplete PR in the fresh sample (2026-11-10). Merged PRs from well-known projects are presumed benign. false-positive = the finding is wrong; rule-correct = true finding about a risky practice in a benign PR; noise = true but routine; limit = engine limit; sampling-artifact = old-PR fetch problem. Labelled after the run, by the same author as the rules, so treat as one reviewer's judgement."
+}

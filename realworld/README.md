@@ -17,3 +17,6 @@ take a fresh sample (`sample` then `run`) after tuning. Headline numbers and the
 `docs/PROGRESS.md`.
 
 Reproduce: `GITHUB_TOKEN=... python -m pr_scanner.realworld run --manifest realworld/sample-2026-11-09.json --results out.json`
+
+## Second, fresh sample (2026-11-10)
+684 PRs from 35 repositories that were **not** in the first sample, scanned at `e95f51e` (`sample-`, `results-` and `labels-2026-11-10.json`). Evidence snippets are stripped from the results. 6 PRs that first failed with a connection error were re-run once and are recorded with the re-run result. Numbers and caveats: `docs/PROGRESS.md`.
