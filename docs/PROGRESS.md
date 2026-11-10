@@ -15,7 +15,7 @@ Runs end to end as a GitHub Action: live on this repository, rehearsed on a thro
 | Fetcher | Done, GET-only. Exercised on 800 real PRs. |
 | Reporter, `report_io`, `publisher`, `cli` | Done. Escaping verified against GitHub's real renderer. Trust model in ADR-0005. |
 | Action workflow | `.github/workflows/pr-scan.yml`: `pull_request_target`, two jobs, scanner pinned by SHA (currently `f2af846`). 18 property tests guard it. |
-| Protection of this repo | Branch protection and CODEOWNERS applied (`docs/branch-protection.md`). Admins can bypass (solo maintainer). |
+| Protection of this repo | Branch protection and CODEOWNERS applied (`docs/branch-protection.md`). Since 2026-11-09: 0 approvals, `PR scanner` required, **enforced on admins**, so no merge skips the scan. |
 | Real-world runner | `python -m pr_scanner.realworld`, plus data in `realworld/`. |
 | **Open PRs** | Stacked, merge in order: #5 `rules/dropper-proximity` (EXEC-DROPPER bundle fix), #6 `realworld/runner`, #7 `realworld/data-and-docs` (data, docs, this file); after each squash merge, rebase the next onto `main`. Independent: #4 `ci/run-tests` (CI that runs the tests). #3 was closed: split into #5-#7 for review (16k lines, 92% JSON). `main` on GitHub is at `b49b7bf`. |
 
@@ -64,7 +64,7 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 - **Done 2026-11-09: GitHub's default `pull_request_target` block.** GitHub will block `pull_request_target` in public repositories by default from **2026-12-02** (a brownout on 2026-11-09 gave `startup_failure` on PRs #3 and #4; failed-at-startup runs cannot be re-run, only a new push or reopen starts one). A repository Actions policy (id 12534, Settings > Actions > Policies) now allows only `pull_request_target`, only for `.github/workflows/pr-scan.yml`. **Not yet confirmed** that the path format matches and that it suppresses the default block: check the first PR scan after 2026-12-02. Adopter docs must tell every adopter to create the same policy.
 - **P2 Our own scan flags our own tests.** Attack-like literals in Python test files are, to the scanner, attack-like code; PR #3 was blocked on its first scan. Fixed for the new code by `tests/fixtures/snippets.txt` (data files are not read by `EXEC-DROPPER`); `tests/test_snippets.py` keeps listed files clean when scanned whole. Still inline, so edits near those lines will be flagged: `test_cli.py`, `test_rules_hooks.py`, the older half of `test_rules_dropper.py`, and `src/pr_scanner/rules/dropper.py` (its own regexes). Tests are never exempt from scanning: CI runs them.
 - **P1 CI for this repository's own tests: PR #4** (`tests.yml`, hash-pinned packages, passed on GitHub). After merge: make `tests` a required status check (branch protection change, ask first).
-- **PRs #5, #6, #7 open** (split from #3). Merge needs the owner: GitHub does not let an author approve their own PR, so a solo maintainer merges with `--admin`. Keep future PRs small; mark generated data `linguist-generated` (`.gitattributes`).
+- **PRs #5, #6, #7 open** (split from #3). Merge in order with a plain `gh pr merge N --squash` once the scan passes (no `--admin`: it is now blocked, see branch protection). Keep future PRs small; mark generated data `linguist-generated` (`.gitattributes`).
 - **P2 Fresh real-world sample** after the next rule fixes (the current one is no longer independent for tuned rules).
 - **P2 Visual check of the Checks tab.** Only the API was read. Confirm the summary renders, the `<!-- x -->` annotation path shows as text, and `neutral` (WARN) and `action_required` (INCOMPLETE) look right.
 - **P2 Confirm the conclusion mapping:** WARN is `neutral` (passes required checks), INCOMPLETE is `action_required`, BLOCK and ERROR are `failure`.
@@ -72,7 +72,7 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 - **P2 Pin bumps are manual** and a stale pin means the Action runs old code. The bump PR is scanned by the old scanner. Consider a reminder or a check that compares the pin with `main`.
 - **P2 Standing warnings** on edits to the scanner workflow, `.pr-scanner.yml` or CODEOWNERS until a suppression flow (FR-11) exists.
 - **P3 Package the Action** (composite or Docker, versioned releases, adopter docs) so other repos do not copy the workflow. Later a GitHub App for org-wide installs and an audit store (FR-15).
-- **P3 Protection:** when a second maintainer exists, turn on `enforce_admins` and add them to CODEOWNERS. Guard the owner account (passkey, no stray `repo` tokens). Check that private vulnerability reporting (SECURITY.md) is switched on.
+- **P3 Protection:** when a second maintainer exists, set approvals to 1, turn Code Owner review back on, and add them to CODEOWNERS. Guard the owner account (passkey, no stray `repo` tokens). Check that private vulnerability reporting (SECURITY.md) is switched on.
 
 ### D. Features not built
 - Suppression flow with authority and audit (FR-11, T-S07); config file read from the base branch (FR-12).
@@ -105,7 +105,7 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 12. Fixing a false positive can turn a block into an incomplete (the byte cap): re-scan real PRs after every fix, do not stop at the unit tests.
 
 ## Decisions and open questions for the owner
-- Decided: rules first, LLM optional; never execute PR code; trust model ADR-0005 (base-branch workflow, two jobs, untrusted artifact); solo-friendly branch protection (admins can bypass); scanner pinned by commit SHA from this repo.
+- Decided: rules first, LLM optional; never execute PR code; trust model ADR-0005 (base-branch workflow, two jobs, untrusted artifact); branch protection binding on everyone including the owner (0 approvals while solo, scan required, `enforce_admins` on); scanner pinned by commit SHA from this repo.
 - Open: final language (ADR-0002); WARN as `neutral`; which ecosystems next; the original incident's details; whether and when to add a second maintainer; how to treat third-party-API secrets in `CI-SECRETS`.
 
 ## Session log
