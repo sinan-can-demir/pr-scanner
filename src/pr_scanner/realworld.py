@@ -168,14 +168,20 @@ class Summary:
     outcomes: dict[str, int]
     rules: dict[str, int]  # number of PRs in which each rule fired
 
+    def _base(self, outcome: str) -> int:
+        # errors were never scanned, so their rate is over all PRs; the others over scanned PRs
+        return self.total if outcome == "error" else self.scanned
+
     def rate(self, outcome: str) -> float | None:
-        return self.outcomes.get(outcome, 0) / self.scanned if self.scanned else None
+        n = self._base(outcome)
+        return self.outcomes.get(outcome, 0) / n if n else None
 
     def interval(self, outcome: str) -> tuple[float, float] | None:
         """95% Wilson score interval, which stays meaningful at 0 or 1 observed."""
-        if not self.scanned:
+        n = self._base(outcome)
+        if not n:
             return None
-        n, p = self.scanned, self.outcomes.get(outcome, 0) / self.scanned
+        p = self.outcomes.get(outcome, 0) / n
         denom = 1 + _Z**2 / n
         centre = (p + _Z**2 / (2 * n)) / denom
         half = _Z * math.sqrt(p * (1 - p) / n + _Z**2 / (4 * n**2)) / denom
@@ -288,13 +294,16 @@ def main(
     manifest = _load(args.manifest, {"prs": []})["prs"]
     done = _load(args.results, {"records": []})
     records = done["records"]
-    seen = {(r["repo"], r["number"], r["head_sha"]) for r in records}
+    # Keyed by PR, not head SHA: a record holds the head that was fetched, which differs from the
+    # sampled one when the PR moved (head_changed), and must still count as done.
+    seen = {(r["repo"], r["number"]) for r in records}
     engine = Engine(default_registry())
     stopped = False
     for item in manifest:
         ref = PrRef(item["repo"], item["number"], item["head_sha"])
-        if (ref.repo, ref.number, ref.head_sha) in seen:
+        if (ref.repo, ref.number) in seen:
             continue
+        seen.add((ref.repo, ref.number))
         try:
             records.append(evaluate(client, ref, engine).to_json())
         except FetchError:  # rate limited: keep what we have, resume later

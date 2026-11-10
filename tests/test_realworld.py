@@ -175,6 +175,10 @@ def test_summary_counts_outcomes_and_rates():
     assert s.scanned == 4  # errors are not scanned PRs
     assert s.rate("block") == pytest.approx(1 / 4)
     assert s.rate("warn") == pytest.approx(1 / 4)
+    # errors were not scanned, so their rate is over all PRs, not over the scanned ones
+    assert s.rate("error") == pytest.approx(1 / 5)
+    lo, hi = s.interval("error")
+    assert lo < 1 / 5 < hi
 
 
 def test_summary_counts_prs_per_rule_not_findings():
@@ -218,6 +222,19 @@ def test_run_resumes_and_skips_prs_already_done(tmp_path):
     calls = len(client.calls)
     rw.main(["run", "--manifest", str(manifest), "--results", str(results)], env=env, client_factory=lambda t: client)
     assert len(client.calls) == calls
+
+
+def test_resume_skips_a_pr_whose_head_moved_after_sampling(tmp_path):
+    # found in review: the record stores the fetched head, the manifest the sampled one, so a
+    # resume used to scan such a PR again and count it twice
+    manifest, results = tmp_path / "m.json", tmp_path / "r.json"
+    manifest.write_text(json.dumps({"prs": [{"repo": "owner/repo", "number": 7, "head_sha": "c" * 40}]}))
+    client = FakeClient(routes_for(diff=BENIGN_DIFF))  # serves HEAD, not c*40
+    env = {"GITHUB_TOKEN": "ghs_abcdefghijklmnop"}
+    for _ in range(2):
+        rw.main(["run", "--manifest", str(manifest), "--results", str(results)], env=env, client_factory=lambda t: client)
+    records = json.loads(results.read_text())["records"]
+    assert len(records) == 1 and records[0]["head_changed"]
 
 
 def test_a_rate_limit_stops_the_run_cleanly_and_keeps_progress(tmp_path):
