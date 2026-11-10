@@ -47,6 +47,11 @@ PAYLOADS = {
     "curl-then-pipes": "curl " + "| " * 100_000,
     "spaces-then-keyword": " " * 300_000 + "postinstall",
     "ip-like": "1.2.3." * 50_000,
+    "base64-repeat": "base64 " * 30_000,
+    "eval-space-repeat": "eval " * 40_000,
+    "pipe-sudo-repeat": "| sudo " * 30_000,
+    "exec-open-repeat": "exec( open( " * 17_000,
+    "decode-flags-repeat": "xz -d " * 35_000,
 }
 
 pytestmark = pytest.mark.perf

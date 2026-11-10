@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .dropper import RemoteBinaryExec
 from .hooks import NpmLifecycleHook, PyBuildBackend, PySetupHook
+from .obfuscated import ObfuscatedExec
 from .registry import Registry
 from .scanner import ScannerTamper
 from .workflows import (
@@ -20,6 +21,7 @@ ALL_RULES = (
     PySetupHook,
     PyBuildBackend,
     RemoteBinaryExec,
+    ObfuscatedExec,
     PullRequestTargetCheckout,
     ActionPinning,
     PermissionsWidening,

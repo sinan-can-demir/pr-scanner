@@ -1,0 +1,7 @@
+{
+  "description": "base64 decode and exec of a version file live far apart and are unrelated",
+  "expect_outcome": "pass",
+  "covers_rules": [
+    "EXEC-OBFUSCATED"
+  ]
+}

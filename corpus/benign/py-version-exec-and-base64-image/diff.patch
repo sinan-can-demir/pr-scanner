@@ -1,0 +1,35 @@
+diff --git a/src/pkg/util.py b/src/pkg/util.py
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/src/pkg/util.py
+@@ -0,0 +1,29 @@
++import base64
++def logo_bytes(s):
++    return base64.b64decode(s)
++def read_version():
++    ns = {}
++    exec(open("_version.py").read(), ns)
++    return ns["__version__"]
++x = 0
++x = 1
++x = 2
++x = 3
++x = 4
++x = 5
++x = 6
++x = 7
++x = 8
++x = 9
++x = 10
++x = 11
++x = 12
++x = 13
++x = 14
++x = 15
++x = 16
++x = 17
++x = 18
++x = 19
++def run(cmd):
++    return eval(cmd, {"__builtins__": {}})
