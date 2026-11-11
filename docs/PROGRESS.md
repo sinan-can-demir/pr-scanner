@@ -125,6 +125,26 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 - GitHub App `pr-scanner-sandbox` still exists (private key deleted). Delete it unless it is reused.
 - The real-world sample and results were first written to a temporary scratch directory; copies are now in `realworld/` (stripped of evidence text).
 
+## Scoping notes (2026-11-11, owner asked which next items need scoping)
+No scoping needed, just tests first: `SCANNER-TAMPER` only for the effective `CODEOWNERS` locations (root, `.github/`, `docs/`); reword the downgraded `CI-SECRETS` finding (it still says the secret is "encoded or sent over the network"). Needs the owner's OK, not scoping: make `tests` a required check pinned to the GitHub Actions app (risk: a flaky test then blocks every PR).
+
+Needs scoping first:
+- **Binary-change signal (xz gap).** Binary changes are common (images, fonts, blobs), so a naive signal is noisy. Questions: which paths count, what severity, and "binary changed in a test path while no source changed" as the shape. Measure how often it occurs in the existing samples before choosing.
+- **New-dependency signal (event-stream gap).** The useful version needs registry data (package age, maintainers), meaning network calls beyond the GitHub API, which touches ADR-0004 (static, diff-only). An offline version could flag "new dependency plus an install script". Owner decision needed before any code.
+- **5 MiB cap and bundle INCOMPLETE.** Optimise and measure first; the runner does not yet record why a scan is incomplete.
+- **Scanning whole repositories** (not built; the tool scans PR diffs only, and the real-world runner scans past PRs). A new mode with its own limits and severities, not a tweak.
+- **Adoption flow (first install on a repository).** See the next section.
+
+## Adoption flow: what happens when the scanner is first added to a repository (design notes, not yet verified on a fresh repo)
+Today there is no packaged Action: an adopter copies `pr-scan.yml`, pins the scanner SHA, sets branch protection (`docs/branch-protection.md`) and, for public repositories, the Actions policy for `pull_request_target`. Consequences, from how GitHub works and from this repo's design:
+1. **The PR that adds the workflow is not scanned by it.** `pull_request_target` runs the base branch's workflow, and the base has none yet. The first merge is a manual review. Nothing in the docs says so.
+2. **Order matters.** If `PR scanner` is made a required check before the workflow is on the default branch, every PR waits on "Expected" forever. Merge the workflow first, then protect the branch (and a PR must run the check once for the name to appear in the UI picker).
+3. **Only new diffs are scanned.** Existing code is never read, so a repository that already contains something malicious sees nothing. Open PRs are scanned only on their next push or reopen (`opened`, `synchronize`, `reopened`).
+4. **Day-one noise with no release valve.** About 2% of PRs warn and about 0.4% block on presumed-benign samples (tag-pinned actions, `id-token: write`, CODEOWNERS edits, legitimate installers). There is no suppression flow (FR-11), so the only ways past a block are changing the code or turning off enforcement. This is the biggest adoption problem.
+5. **Unverified:** private repositories, fork PRs from other accounts, and a first install on a brand-new repository. The fork rehearsal started with the workflow already in place.
+6. **Pin upkeep is manual**, and an adopter on an old pin runs old rules.
+Candidate work: an adopter guide with the right order (workflow first, then protection, then the Actions policy), a one-command setup script, an explicit "first PR is not scanned" note, a suppression flow, and a rehearsal on a brand-new scratch repository.
+
 ## Bugs and lessons worth remembering
 1. `||` was read as a pipe (`prebuild-install || node-gyp rebuild`). 2. Rules truncated lines at 4,000 chars, so padding hid payloads (fixed; padding must never help an attacker). 3. Five super-linear regexes (fixed with single-pass algorithms, not length bounds). 4. A fingerprint crash on lone surrogates.
 5. **Python `$` also matches before a trailing newline**: `sha + "\n"` passed four validators. Use `\Z`.
