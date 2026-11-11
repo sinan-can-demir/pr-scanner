@@ -85,4 +85,4 @@ See also [Progress log](docs/PROGRESS.md) for current status, known gaps and nex
 - **Phase 3 (planned):** suppressions (FR-11), config (FR-12), sock-puppet signal (FR-18), GitHub App, optional LLM triage
 
 ## License
-Apache License 2.0, see [LICENSE](LICENSE). The code is open for anyone to use, and the project is maintained by its author.
+Copyright 2026 Sinan Can Demir. Licensed under the Apache License 2.0, see [LICENSE](LICENSE). The code is open for anyone to use, and the project is maintained by its author.
