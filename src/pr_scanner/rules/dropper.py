@@ -63,6 +63,9 @@ _CI = re.compile(
     r"|process\.env\.CI\b|getenv\s*\(\s*[\"']CI[\"']|\$\{?CI\}?\b|\bis[_-]?ci\b|\bci-info\b",
     re.IGNORECASE,
 )
+# A source build step. Used only to tell "downloads source, builds it, makes the built libraries executable"
+# (a normal build script) from "downloads a binary and makes it executable" (see _whole_file).
+_BUILD_STEP = re.compile(r"\./configure\b|\bmake\b|\bcmake\b|\bmeson\b|\bninja\b|\bcargo\s+build\b|\bgo\s+build\b")
 _RAW_IP_URL = re.compile(r"(?:https?|ftp)://\d{1,3}(?:\.\d{1,3}){3}\b|(?:https?|ftp)://\[[0-9a-fA-F:]+\]")
 
 
@@ -205,14 +208,20 @@ class RemoteBinaryExec(Rule):
         executes = bool(hits["spawn"] or hits["chmod"])
         downloads = bool(hits["download"])
         ci = bool(hits["ci"])
+        source_build = False
         if executes and downloads:
             sev = Severity.CRITICAL if (ci or hits["rawip"]) else Severity.HIGH
+            if sev == Severity.HIGH and not hits["spawn"] and _is_build_script(f) and _has_build_step(f):
+                # chmod is the only execute signal and the script also builds from source: a warn, not a block.
+                # Deliberately not an exemption: a shell script's only execute signal IS chmod, so an
+                # attacker can still add a build line and downgrade a block to a warn, but never hide it.
+                sev, source_build = Severity.MEDIUM, True
         elif executes and ci and hits["spawn"]:
             sev = Severity.MEDIUM
         else:
             return None
         first = min(hits["spawn"][:1] + hits["chmod"][:1])
-        return self._build(f, sev, first, hits)
+        return self._build(f, sev, first, hits, source_build)
 
     # ---- large generated files: signals must be close together -----------------------------
 
@@ -264,7 +273,8 @@ class RemoteBinaryExec(Rule):
 
     # ---- shared ---------------------------------------------------------------------------
 
-    def _build(self, f: ChangedFile, sev: Severity, first_exec_line: int, hits: dict[str, list[int]]) -> Finding:
+    def _build(self, f: ChangedFile, sev: Severity, first_exec_line: int, hits: dict[str, list[int]],
+               source_build: bool = False) -> Finding:
         downloads, ci = bool(hits["download"]), bool(hits["ci"])
         executes = bool(hits["spawn"] or hits["chmod"])
         parts = []
@@ -286,6 +296,12 @@ class RemoteBinaryExec(Rule):
             )
         if downloads and executes:
             why += " Downloading and running a binary is the typical pattern of a malware dropper."
+        if source_build:
+            why += (
+                " The script also runs a source build step (configure, make, cmake...), which is how normal build"
+                " scripts fetch sources and make the libraries they built executable, so this is reported as a"
+                " warning. Check that the downloaded content is source, not a prebuilt binary that gets run."
+            )
         raw = dict(f.added_lines)[first_exec_line]
         return Finding(
             rule_id=self.id,
@@ -301,6 +317,19 @@ class RemoteBinaryExec(Rule):
             ),
             confidence=0.9 if sev >= Severity.CRITICAL else 0.7 if sev == Severity.HIGH else 0.4,
         )
+
+
+def _is_build_script(f: ChangedFile) -> bool:
+    return classify(f.path) == FileKind.BUILD_SCRIPT
+
+
+def _has_build_step(f: ChangedFile) -> bool:
+    for _, raw in f.added_lines:
+        if raw.lstrip().startswith(_COMMENT_PREFIXES):
+            continue
+        if _BUILD_STEP.search(cap(raw)):
+            return True
+    return False
 
 
 def _is_in(entries: list[tuple[int, int]], offset: int, line: int) -> bool:
