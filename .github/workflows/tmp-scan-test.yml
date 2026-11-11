@@ -1,0 +1,17 @@
+name: tmp scan test (never runs)
+on: workflow_dispatch
+
+concurrency:
+  group: tmp-${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  x:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the rate limit
+        run: |
+          curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/rate_limit
