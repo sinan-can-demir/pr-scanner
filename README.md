@@ -1,13 +1,40 @@
 # PR Scanner
 
-A GitHub App / Action that statically scans pull requests for signs of malicious code (supply-chain attacks, CI tampering, obfuscated payloads, credential exfiltration) and reports an explainable verdict on the PR.
+A GitHub Action that statically scans pull requests for signs of malicious code (supply-chain attacks, CI tampering, obfuscated payloads, credential exfiltration) and reports an explainable verdict on the PR. Python standard library only, no runtime dependencies.
 
-**Status (2026-11-09):** runs end to end as a GitHub Action, live on this repository and rehearsed on a throwaway fork. 12 rules (install hooks, remote-binary droppers, CI workflow risks, tampering with the scanner itself), a fail-safe engine, a hardened diff parser, a GitHub fetcher, an escaped check-run reporter, and a two-job workflow whose trust model is in [ADR-0005](docs/adr/0005-action-trust-model.md). 809 tests plus 22 slow adversarial-performance tests. **Not built yet:** suppressions, config file, sock-puppet signal, obfuscation and dependency rules, optional LLM triage, packaging for other repositories. **Honest limits:** the in-repo corpus was written together with the rules, so its 100% recall is a sanity check; a real-world false-positive measurement is in [Progress](docs/PROGRESS.md) and recall on real attacks is still unmeasured.
+Pull requests are how supply-chain attacks get in: a postinstall hook, a workflow edit, a "test file" that is really a payload. PR Scanner reads the **diff** of each pull request, never runs it, and posts a check with a verdict (pass, warn or block) where every finding has a rule ID, the evidence, why it matters and how to fix it.
+
+## What it catches
+| Rule | Flags |
+|---|---|
+| `HOOK-NPM`, `HOOK-PYSETUP`, `HOOK-PYBACKEND` | install hooks that run code (`postinstall`, `setup.py`, build backends) |
+| `EXEC-DROPPER` | download-then-run: fetch, write, `chmod +x` or spawn, in source files and build scripts |
+| `EXEC-OBFUSCATED` | decode-then-run: base64, hex, `xz -d` or `openssl enc` next to `eval`, `exec`, `_compile` or a pipe into a shell |
+| `CI-PRT`, `CI-INJECT`, `CI-SECRETS`, `CI-PIPE-SH` | risky workflow changes: `pull_request_target` checkouts, script injection, secrets sent out or encoded, `curl \| sh` |
+| `CI-UNPINNED`, `CI-PERMS` | actions not pinned to a commit, widened token permissions |
+| `SCANNER-TAMPER` | edits to the scanner's own workflow, config or `CODEOWNERS`, so it cannot be quietly switched off |
+
+Details, severities and known limits are in the [rule catalog](docs/rules.md).
+
+## How well does it work?
+Measured on real pull requests, with the limits stated.
+- **Noise (false positives):** a sample of 684 merged PRs from 35 repositories the rules were not tuned on: 94.4% pass, 2.3% warn, 0.44% block (3 PRs, one of them a correct finding), 2.8% incomplete (too large to scan), measured before two later false-positive fixes. A second sample of 300 PRs from build-script-heavy repositories: 1 block (a correct finding). These PRs are presumed benign, so this measures noise, **not** recall. One reviewer labelled them.
+- **Recall on real attacks:** a small corpus of 8 defanged cases from documented incidents (xz, event-stream, tj-actions, nx, Shai-Hulud). The first run caught **4 of 8**. A rule added afterwards catches 2 of the 4 misses, but it was written looking at them, so that is not independent evidence. The other 2 are outside what a diff-only text scanner can see: **binary files** (the xz test files) and **adding an unknown dependency** (event-stream).
+- **In-repo corpus:** 100% recall, but it was written together with the rules, so it is a sanity check, not a measurement.
+
+Full tables, labels and caveats: [Progress](docs/PROGRESS.md) and [recall on real attacks](docs/recall-real-attacks.md).
+
+## What it does not do
+- It does not run or sandbox code, so it cannot see what a payload does, only what the diff looks like.
+- It does not see binaries, tarballs, or a dependency being added (see above).
+- Legitimate installers that download a binary and `chmod +x` it are blocked; the plan is reviewed suppressions, not looser rules.
+- Very large diffs (over 5 MiB) are reported as incomplete, never as a silent pass.
+- Not packaged for other repositories yet, and no suppressions or config file. It is **live on this repository** and was rehearsed on a throwaway fork.
 
 ## Quick start
 ```
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m pytest                          # 809 tests
+.venv/bin/python -m pytest                          # the default suite
 .venv/bin/python -m pytest -m perf                  # adversarial performance, ~2 min, run in CI
 .venv/bin/python -m pr_scanner.corpus corpus        # recall / false-positive report on the in-repo corpus
 ```
@@ -53,6 +80,6 @@ See also [Progress log](docs/PROGRESS.md) for current status, known gaps and nex
 
 ## Roadmap
 - **Phase 0 (done):** docs, threat model, skeleton
-- **Phase 1 (mostly done):** diff ingestion, rule engine, install-hook, dropper, CI and scanner-tamper rules, corpus. Open: obfuscation (FR-06) and dependency (FR-07) rules, dropper cross-file correlation
-- **Phase 2 (mostly done):** GitHub Action wrapper, check run and annotations, trust model. Open: CI that runs this repository's own tests, packaging for other repositories
+- **Phase 1 (mostly done):** diff ingestion, rule engine, install-hook, dropper, CI and scanner-tamper rules, corpus. Open: dependency rules (FR-07), a binary-change signal, dropper cross-file correlation
+- **Phase 2 (mostly done):** GitHub Action wrapper, check run and annotations, trust model. Open: packaging for other repositories
 - **Phase 3 (planned):** suppressions (FR-11), config (FR-12), sock-puppet signal (FR-18), GitHub App, optional LLM triage
