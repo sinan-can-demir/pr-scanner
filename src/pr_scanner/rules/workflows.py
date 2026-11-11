@@ -395,6 +395,48 @@ _UNTRUSTED = re.compile(
 _PURE_ASSIGNMENT = re.compile(r"""^\s*(?:-\s*)?([\w.-]+)\s*:\s*["']?\$\{\{[^}]*\}\}["']?\s*$""")
 _SCRIPT_KEYS = {"run", "script"}
 
+# Keys whose value GitHub reads as a label and never runs: the group of a concurrency block, an inline
+# "concurrency: <group>", and the workflow's run-name. The exemption needs the whole head file, to prove the line
+# really is that key and not text inside a script (a "concurrency:" typed into a run block). No proof, no exemption.
+_KEY_LINE = re.compile(r"^(\s*)(-\s+)?([A-Za-z0-9_.-]+)\s*:(.*)$")
+_BLOCK_SCALAR = re.compile(r"^\s*[|>][+-]?\d*\s*(?:#.*)?$")
+_MAX_CTX_LINES = 20000
+_LABEL_KEY = re.compile(r"^\s*(?:group|concurrency|run-name)\s*:")
+
+
+_CLIMB = 200  # how far above a "group:" line its "concurrency:" may be; bounds the work per line
+
+
+def _is_label_key(lines: list[str] | None, n: int, text: str) -> bool:
+    if lines is None or not 1 <= n <= len(lines) or lines[n - 1].strip() != text.strip():
+        return False
+    m = _KEY_LINE.match(lines[n - 1])
+    if not m or m.group(2):
+        return False  # not a plain "key: value" line (a list item or continuation text)
+    indent, key = len(m.group(1)), m.group(3)
+    if key in ("concurrency", "run-name"):
+        return indent == 0 or key == "concurrency"  # a job-level concurrency may be inline; run-name is top-level only
+    if key != "group" or indent == 0:
+        return False
+    # "group" must sit directly under "concurrency", and nothing above may open a script (block scalar) or be a list item
+    cur, want = indent, "concurrency"
+    for i in range(n - 2, max(-1, n - 2 - _CLIMB), -1):
+        line = lines[i]
+        if not line.strip() or _is_comment(line):
+            continue
+        mm = _KEY_LINE.match(line)
+        ind = len(line) - len(line.lstrip(" "))
+        if ind >= cur:
+            continue
+        if not mm or (mm.group(3) != want and want):
+            return False
+        if mm.group(2) or _BLOCK_SCALAR.match(mm.group(4)):
+            return False
+        want, cur = "", ind  # from here up, only reject script blocks
+        if ind == 0:
+            return True
+    return False  # ran out of window without reaching the top: no proof
+
 
 class ScriptInjection(Rule):
     id = "CI-INJECT"
@@ -405,6 +447,7 @@ class ScriptInjection(Rule):
     def evaluate(self, diff: Diff) -> Sequence[Finding]:
         out: list[Finding] = []
         for f in _eligible(diff, _is_github_workflow):
+            ctx: list[str] | None | bool = False  # the head file split into lines, built once and only if needed
             for n, t in _added(f):
                 s = cap(t)
                 bad = next((e.strip() for e in _expressions(s) if _UNTRUSTED.search(e)), None)
@@ -413,6 +456,14 @@ class ScriptInjection(Rule):
                 m = _PURE_ASSIGNMENT.match(s)
                 if m and m.group(1) not in _SCRIPT_KEYS:
                     continue  # env:/with: assignment, the recommended mitigation
+                if _LABEL_KEY.match(s):
+                    if ctx is False:
+                        c = f.new_content
+                        ctx = None if c is None else c.split("\n", _MAX_CTX_LINES)
+                        if ctx is not None and len(ctx) > _MAX_CTX_LINES:
+                            ctx = None  # too large to prove anything cheaply
+                    if _is_label_key(ctx, n, t):
+                        continue  # a concurrency group or run-name: a label, not a script
                 out.append(_finding(
                     self, f, n, t, Severity.HIGH,
                     f"'${{{{ {bad[:80]} }}}}' is controlled by whoever opens the pull request or issue and is pasted into a "

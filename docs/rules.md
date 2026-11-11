@@ -112,6 +112,7 @@ Known limits: same file only; added lines only; payloads in binary files or tarb
 | `CI-PIPE-SH` | High (Critical for a raw IP) | download piped into a shell/interpreter, `bash <(curl ...)`, `sh -c "$(curl ...)"`, `iex (iwr ...)`; quote-splitting is normalised |
 | `CI-INJECT` | High | attacker-controlled context (`pull_request.title/body/head.ref`, `issue.body`, `comment.body`, `head_ref`, commit messages/author names/emails, ...) expanded directly in a script or `github-script` |
 | | none | passing it through `env:`/`with:` as a whole-value assignment (the recommended safe pattern) |
+| | none | the label keys `concurrency.group`, an inline `concurrency:` and a top-level `run-name:`, but only when the head file proves the line is that key (not text inside a script block, not `group:` under `with:`). Without the file context they still fire |
 
 Known limits: line-based, so values split over several lines (YAML folded scalars) are missed; the key under `permissions:` is not verified to be in a `permissions` block; removed restrictions (deleting a `permissions:` block) are not yet reported; GitLab/CircleCI/Jenkins files only get `CI-PIPE-SH`; expression functions that rebuild a tainted value (`format(...)`) are not tracked.
 

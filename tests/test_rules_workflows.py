@@ -346,6 +346,98 @@ def test_env_assignments_and_trusted_values_are_fine(line):
     assert run(ScriptInjection, wf(line)) == []
 
 
+# The "group" of a concurrency block (and run-name) is a label GitHub reads, never a script: a real false
+# positive (numpy#33227). They are exempt only when the file context proves where the line sits.
+
+NUMPY_SHAPE = """name: Pixi
+on: [pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+"""
+
+
+def with_content(content, line_no, text=None):
+    """One added line, plus the whole head file (as the fetcher supplies it)."""
+    lines = content.split("\n")
+    return wf(text if text is not None else lines[line_no - 1], content=content), line_no
+
+
+def inject_on(content, line_no):
+    f = ChangedFile(
+        path=WF, status="modified", added_lines=((line_no, content.split("\n")[line_no - 1]),), new_content=content
+    )
+    return run(ScriptInjection, f)
+
+
+def test_concurrency_group_is_not_a_script():
+    assert inject_on(NUMPY_SHAPE, 5) == []
+
+
+def test_job_level_concurrency_group_is_not_a_script():
+    c = "jobs:\n  b:\n    concurrency:\n      group: x-${{ github.head_ref }}\n    runs-on: x\n"
+    assert inject_on(c, 4) == []
+
+
+def test_inline_concurrency_and_run_name_are_not_scripts():
+    assert inject_on("concurrency: ci-${{ github.head_ref }}\njobs: {}\n", 1) == []
+    assert inject_on("run-name: PR ${{ github.event.pull_request.title }}\njobs: {}\n", 1) == []
+
+
+def test_without_file_context_the_group_line_still_fires():
+    assert one(ScriptInjection, wf("  group: ${{ github.workflow }}-${{ github.head_ref }}")).severity == Severity.HIGH
+
+
+@pytest.mark.parametrize(
+    "content,line_no",
+    [
+        # group under with:, not concurrency:
+        ("steps:\n  - uses: a/b@v1\n    with:\n      group: x-${{ github.head_ref }}\n", 4),
+        # a fake concurrency block inside a run script
+        ("steps:\n  - run: |\n      concurrency:\n        group: x-${{ github.head_ref }}\n", 4),
+        # the same, one level deeper
+        ("jobs:\n  a:\n    steps:\n      - run: >-\n          concurrency:\n            group: x-${{ github.head_ref }}\n", 6),
+        # run-name indented under a step is not the workflow's run-name
+        ("steps:\n  - run: |\n      run-name: x-${{ github.head_ref }}\n", 3),
+        # a script line
+        ("concurrency:\n  group: x\nsteps:\n  - run: echo ${{ github.head_ref }}\n", 4),
+        # group value continued on a following line (block scalar)
+        ("concurrency:\n  group: >\n    ${{ github.head_ref }}\n", 3),
+        # group with a script-shaped value in a with: of github-script
+        ("concurrency:\n  x: 1\nsteps:\n  - uses: actions/github-script@v7\n    with:\n      script: ${{ github.head_ref }}\n", 6),
+    ],
+)
+def test_concurrency_exemption_does_not_cover_these(content, line_no):
+    (f,) = inject_on(content, line_no)
+    assert f.severity == Severity.HIGH
+
+
+def test_a_misaligned_file_context_does_not_exempt():
+    f = ChangedFile(
+        path=WF, status="modified", added_lines=((5, "  group: x-${{ github.head_ref }}"),), new_content=NUMPY_SHAPE.replace("github.head_ref || github.run_id", "github.run_id")
+    )
+    assert run(ScriptInjection, f)[0].severity == Severity.HIGH
+
+
+def test_many_group_lines_in_a_big_file_stay_fast():
+    import time
+
+    body = "\n".join(f"      group: x-${{{{ github.head_ref }}}}{i}" for i in range(4000))
+    content = "steps:\n  - uses: a/b@v1\n    with:\n" + body + "\n"
+    added = tuple((4 + i, f"      group: x-${{{{ github.head_ref }}}}{i}") for i in range(4000))
+    f = ChangedFile(path=WF, status="modified", added_lines=added, new_content=content)
+    t0 = time.perf_counter()
+    out = run(ScriptInjection, f)
+    assert len(out) == 4000 and time.perf_counter() - t0 < 5
+
+
 # ============================================================= registry
 
 
