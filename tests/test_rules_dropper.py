@@ -396,3 +396,53 @@ def test_a_package_manager_spawn_does_not_hide_a_second_real_spawn():
     findings = run(file("src/a.js", snippet("pm_spawn_next_dev"), snippet("pm_download_js"), snippet("pm_spawn_helper")))
     assert findings and findings[0].severity >= Severity.HIGH
     assert findings[0].line == 3
+
+
+# ---- source builds: download + chmod + configure/make is a warn, not a block (fresh-sample false positive) ----
+# Literals live in tests/fixtures/snippets.txt (this repo's own scan reads test files).
+
+def _sh(path, *names):
+    return file(path, *[snippet(n) for n in names])
+
+
+def test_source_build_script_that_chmods_libraries_is_medium_not_high():
+    (f,) = run(_sh("scripts/build/build_libpq.sh", "sh_curl_tar", "sh_configure", "sh_chmod_libs"))
+    assert f.severity == Severity.MEDIUM
+    assert f.line == 3 and "build" in f.rationale.lower()
+
+
+def test_same_script_works_in_a_makefile():
+    (f,) = run(_sh("Makefile", "sh_curl_tar", "sh_configure", "sh_chmod_libs"))
+    assert f.severity == Severity.MEDIUM
+
+
+def test_without_a_build_signal_download_and_chmod_stays_high():
+    (f,) = run(_sh("scripts/get.sh", "sh_curl_tar", "sh_chmod_tmp"))
+    assert f.severity == Severity.HIGH
+
+
+def test_ci_gate_keeps_it_critical_even_with_a_build_signal():
+    (f,) = run(_sh("scripts/b.sh", "sh_ci_check", "sh_curl_tar", "sh_configure", "sh_chmod_libs", "sh_fi"))
+    assert f.severity == Severity.CRITICAL
+
+
+def test_raw_ip_keeps_it_critical_even_with_a_build_signal():
+    (f,) = run(_sh("scripts/b.sh", "sh_curl_tar_ip", "sh_configure", "sh_chmod_libs"))
+    assert f.severity == Severity.CRITICAL
+
+
+def test_a_real_spawn_signal_keeps_it_high_even_with_a_build_signal():
+    (f,) = run(_sh("scripts/b.sh", "sh_curl_tar", "sh_configure", "sh_python_spawn"))
+    assert f.severity == Severity.HIGH
+
+
+def test_the_cap_applies_only_to_build_scripts_not_to_source_or_setup_files():
+    for path in ("src/build.py", "setup.py", "lib/x.js"):
+        (f,) = run(_sh(path, "sh_curl_tar", "sh_configure", "sh_chmod_libs"))
+        assert f.severity == Severity.HIGH, path
+
+
+def test_known_limit_adding_a_build_line_downgrades_a_block_to_a_warn():
+    # An attacker who knows this can add `make`; the finding is still reported (MEDIUM), not hidden.
+    findings = run(_sh("scripts/evil.sh", "sh_curl_tar", "sh_configure", "sh_chmod_tmp"))
+    assert len(findings) == 1 and findings[0].severity == Severity.MEDIUM

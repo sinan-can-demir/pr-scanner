@@ -1,0 +1,25 @@
+{
+ "labels": {
+  "asdf-vm/asdf#2347": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (CI-UNPINNED Medium)"
+  },
+  "asdf-vm/asdf#2348": {
+   "label": "rule-correct",
+   "cause": "docker:// image referenced by tag (CI-UNPINNED Medium)"
+  },
+  "conda/conda#16974": {
+   "label": "rule-correct",
+   "cause": "pull_request_target in cla.yml and project.yml (CI-PRT Medium), each with a comment saying no untrusted code runs; worth a human look, not malicious"
+  },
+  "direnv/direnv#1627": {
+   "label": "rule-correct",
+   "cause": "EXEC-DROPPER High on install.sh: an installer that downloads a prebuilt binary and chmod a+x's it; no source-build step, so the MEDIUM cap does not apply. The documented legitimate-installer limit; benign PR, accurate finding"
+  },
+  "moby/buildkit#7366": {
+   "label": "false-positive",
+   "cause": "SCANNER-TAMPER Medium on vendor/go.opentelemetry.io/otel/CODEOWNERS: a vendored copy of another project's CODEOWNERS has no effect here (GitHub reads only the root, .github/ and docs/)"
+  }
+ },
+ "note": "Hand labels for the 1 block and 4 warns of the build-script sample (2026-11-10): 300 PRs from 12 repos chosen for shell build scripts, none in earlier samples. 0 errors, 0 incomplete. Scanned at 861abb1. The new source-build MEDIUM cap did not fire on any PR here, so this sample does not exercise it. Presumed-benign PRs: measures noise, not recall. One reviewer, who also wrote the rules."
+}
