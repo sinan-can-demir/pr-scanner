@@ -268,6 +268,27 @@ _EXFIL = re.compile(
 )
 _ENV_DUMP = re.compile(r"\b(?:printenv|env)\b\s*\|", re.IGNORECASE)
 
+# The one narrow downgrade: the built-in GITHUB_TOKEN sent to api.github.com. It is scoped to this repository and expires
+# with the job, and this is how workflows comment, label and assign. Every condition below must hold, on one line:
+# only GITHUB_TOKEN is referenced, every URL is https and its host is exactly api.github.com (so no userinfo, no
+# lookalike suffix, no second URL), and nothing re-routes or encodes the request.
+_URL = re.compile(r"[a-z][a-z0-9+.-]*://[^/\s?#`]*", re.IGNORECASE)
+_EXFIL_OTHER = re.compile(
+    r"\b(?:nc|ncat|netcat|iwr|Invoke-WebRequest)\b|\bbase64\b|/dev/tcp/|"
+    r"--(?:resolve|connect-to|proxy|preproxy|socks\w*|interface|unix-socket)\b|(?-i:\s-x\s)|\bhttps?_proxy\b",
+    re.IGNORECASE,
+)
+_GITHUB_API = re.compile(r"https://api\.github\.com(?::443)?", re.IGNORECASE)
+
+
+def _is_github_token_to_github_api(refs: list[str], n_s: str) -> bool:
+    if not refs or any(r != "GITHUB_TOKEN" for r in refs):
+        return False
+    urls = _URL.findall(n_s)
+    if not urls or not all(_GITHUB_API.fullmatch(u) for u in urls):
+        return False
+    return not _EXFIL_OTHER.search(n_s)
+
 
 class SecretExposure(Rule):
     id = "CI-SECRETS"
@@ -287,6 +308,8 @@ class SecretExposure(Rule):
                     sev, why = Severity.HIGH, "This pipes the whole environment (which can include secrets) to another command."
                 elif (ref := _SECRET_REF.search(s)) and _EXFIL.search(n_s):
                     sev = Severity.HIGH
+                    if _is_github_token_to_github_api([m.group(1) for m in _SECRET_REF.finditer(s)], n_s):
+                        sev = Severity.MEDIUM
                     why = (f"The secret '{ref.group(1)}' is used on a line that also encodes it or sends it over the network. "
                            "Encoding is a common trick to get around log masking.")
                 elif _SECRETS_INHERIT.match(s):
