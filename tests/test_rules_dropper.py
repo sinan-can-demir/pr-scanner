@@ -368,3 +368,31 @@ def test_a_line_with_a_hundred_thousand_matches_does_not_blow_up():
     start = time.perf_counter()
     run(f)
     assert time.perf_counter() - start < 10
+
+
+# ---- package-manager spawns are not "run a downloaded binary" (fresh-sample false positive) ----
+# The attack-like literals live in tests/fixtures/snippets.txt (see the comment there): this repository's
+# own PR scan reads test files too, and these strings would block our own pull request.
+
+N_BENIGN, N_EVASIONS = 6, 13
+
+
+@pytest.mark.parametrize("i", range(1, N_BENIGN + 1))
+def test_spawning_a_package_manager_script_with_a_fetch_is_not_a_dropper(i):
+    spawn_line = snippet(f"pm_benign_{i}")
+    py = spawn_line.startswith("subprocess")
+    path = "tests/dev.py" if py else "integrations/dev.test.ts"
+    fetch_line = snippet("pm_fetch_py" if py else "pm_fetch_js")
+    assert run(file(path, spawn_line, fetch_line)) == []
+
+
+@pytest.mark.parametrize("i", range(1, N_EVASIONS + 1))
+def test_package_manager_exemption_does_not_cover_these(i):
+    findings = run(file("src/a.js", snippet(f"pm_evasion_{i}"), snippet("pm_download_js")))
+    assert findings and findings[0].severity >= Severity.HIGH
+
+
+def test_a_package_manager_spawn_does_not_hide_a_second_real_spawn():
+    findings = run(file("src/a.js", snippet("pm_spawn_next_dev"), snippet("pm_download_js"), snippet("pm_spawn_helper")))
+    assert findings and findings[0].severity >= Severity.HIGH
+    assert findings[0].line == 3
