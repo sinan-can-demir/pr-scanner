@@ -132,14 +132,15 @@ Needs scoping first:
 - **Binary-change signal (xz gap).** Binary changes are common (images, fonts, blobs), so a naive signal is noisy. Questions: which paths count, what severity, and "binary changed in a test path while no source changed" as the shape. Measure how often it occurs in the existing samples before choosing.
 - **New-dependency signal (event-stream gap).** The useful version needs registry data (package age, maintainers), meaning network calls beyond the GitHub API, which touches ADR-0004 (static, diff-only). An offline version could flag "new dependency plus an install script". Owner decision needed before any code.
 - **5 MiB cap and bundle INCOMPLETE.** Optimise and measure first; the runner does not yet record why a scan is incomplete.
-- **Scanning whole repositories** (not built; the tool scans PR diffs only, and the real-world runner scans past PRs). A new mode with its own limits and severities, not a tweak.
 - **Adoption flow (first install on a repository).** See the next section.
+
+**Decided 2026-11-11 (owner): whole-repository scanning is a non-goal (NG6 in `docs/00`).** This stays a PR scanner; scanning existing code is left to other tools in CI.
 
 ## Adoption flow: what happens when the scanner is first added to a repository (design notes, not yet verified on a fresh repo)
 Today there is no packaged Action: an adopter copies `pr-scan.yml`, pins the scanner SHA, sets branch protection (`docs/branch-protection.md`) and, for public repositories, the Actions policy for `pull_request_target`. Consequences, from how GitHub works and from this repo's design:
 1. **The PR that adds the workflow is not scanned by it.** `pull_request_target` runs the base branch's workflow, and the base has none yet. The first merge is a manual review. Nothing in the docs says so.
 2. **Order matters.** If `PR scanner` is made a required check before the workflow is on the default branch, every PR waits on "Expected" forever. Merge the workflow first, then protect the branch (and a PR must run the check once for the name to appear in the UI picker).
-3. **Only new diffs are scanned.** Existing code is never read, so a repository that already contains something malicious sees nothing. Open PRs are scanned only on their next push or reopen (`opened`, `synchronize`, `reopened`).
+3. **Only new diffs are scanned (by design, NG6).** Existing code is never read, so a repository that already contains something malicious sees nothing; adopters should keep a repository-wide scanner in CI alongside this one. Open PRs are scanned only on their next push or reopen (`opened`, `synchronize`, `reopened`).
 4. **Day-one noise with no release valve.** About 2% of PRs warn and about 0.4% block on presumed-benign samples (tag-pinned actions, `id-token: write`, CODEOWNERS edits, legitimate installers). There is no suppression flow (FR-11), so the only ways past a block are changing the code or turning off enforcement. This is the biggest adoption problem.
 5. **Unverified:** private repositories, fork PRs from other accounts, and a first install on a brand-new repository. The fork rehearsal started with the workflow already in place.
 6. **Pin upkeep is manual**, and an adopter on an old pin runs old rules.
