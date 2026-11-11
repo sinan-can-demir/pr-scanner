@@ -1,32 +1,35 @@
 # Progress log
 
-Last updated: 2026-11-10, session 5. Resume here.
+Last updated: 2026-11-11, session 5 (continued). Resume here.
 
 ## Where we are
 
-Runs end to end as a GitHub Action: live on this repository, rehearsed on a throwaway fork. 12 rules, 869 default tests plus 29 `perf`-marked tests (`pytest -m perf`, about 2.5 minutes). Everything is Python standard library only.
+Runs end to end as a GitHub Action: live on this repository, rehearsed on a throwaway fork. 12 rules, 928 default tests plus 31 `perf`-marked tests (`pytest -m perf`, about 2.5 minutes). Everything is Python standard library only.
 
 | Area | State |
 |---|---|
 | Docs, threat model, ADRs 0001-0005 | Done and current. ADR-0002 (Python) is still **provisional**. |
 | Engine, policy, diff parser, classifier | Done. Fail-safe: errors and partial scans never pass. Caps: 1000 files, 5 MiB added, 1,000,000 chars per line, 60 s. |
 | Rules (12) | `EXEC-OBFUSCATED` (new, see `docs/recall-real-attacks.md`), `HOOK-NPM`, `HOOK-PYSETUP`, `HOOK-PYBACKEND`, `EXEC-DROPPER`, `CI-PRT`, `CI-UNPINNED`, `CI-PERMS`, `CI-SECRETS`, `CI-PIPE-SH`, `CI-INJECT`, `SCANNER-TAMPER`. See `docs/rules.md`. |
-| In-repo corpus | 28 malicious, 28 benign. Written with the rules, so 100% recall is a sanity check, not evidence. Two cases are real diffs. |
-| Fetcher | Done, GET-only. Exercised on 800 real PRs. |
+| In-repo corpus | 30 malicious, 30 benign. Written with the rules, so 100% recall is a sanity check, not evidence. Two cases are real diffs. |
+| Real-attack corpus | `corpus_real/`: 8 defanged cases from documented incidents (xz, event-stream, tj-actions, nx, Shai-Hulud). First run caught **4 of 8**; `EXEC-OBFUSCATED` then caught 2 of the 4 misses, but it was written looking at them, so that is not independent evidence. The other 2 (binary test files, an added dependency) are outside what a diff-text scanner sees. See `docs/recall-real-attacks.md`. |
+| Fetcher | Done, GET-only. Exercised on four real samples (800, 684, 543 and 300 PRs). |
 | Reporter, `report_io`, `publisher`, `cli` | Done. Escaping verified against GitHub's real renderer. Trust model in ADR-0005. |
 | Action workflow | `.github/workflows/pr-scan.yml`: `pull_request_target`, two jobs, scanner pinned by SHA (currently `774145e`, main after #18: includes `EXEC-OBFUSCATED` and the `EXEC-DROPPER`, `CI-SECRETS` and `CI-INJECT` false-positive fixes). 18 property tests guard it. |
 | Protection of this repo | Branch protection and CODEOWNERS applied (`docs/branch-protection.md`). Since 2026-11-09: 0 approvals, `PR scanner` required, **enforced on admins**, so no merge skips the scan. |
 | Real-world runner | `python -m pr_scanner.realworld`, plus data in `realworld/`. |
 | CI | `.github/workflows/tests.yml` runs the default suite on every PR and push to `main`, `pytest -m perf` weekly and on demand. Packages pinned by hash. 12 property tests guard it. **Not yet a required check.** |
+| Merged 2026-11-10 to 11-11 | #9 real-attack recall corpus, #10 `EXEC-OBFUSCATED`, #11 fresh real-world sample, #12 and #14 `EXEC-DROPPER` false-positive fixes, #13 scanner pin bump, #15 `CI-SECRETS` fix, #16 `CI-INJECT` fix, #17 Apache-2.0 license, #18 README refresh. |
 | Merged 2026-11-09 | #4 (CI), #5 (`EXEC-DROPPER` bundle fix), #6 (real-world runner, plus two resume and summary fixes found in review), #7 (this data and docs). #3 was closed and split into #5-#7 for review (16k lines, 92% JSON). |
 
 ## Verified on real systems (2026-11-09)
 - **Fetcher and engine** on 800 recent merged PRs from 32 public repos (14,421 files, 0 fetch errors).
 - **Reporter** against GitHub's Markdown renderer (mentions, links, issue and commit references, HTML and hidden characters all inert after one fix) and a real check run with 27 annotations.
 - **Action** in GitHub Actions on a fork (benign PASS, malicious BLOCK, workflow-tamper BLOCK after `SCANNER-TAMPER`) and on this repo (PR #1 and #2 passed the scan and were held by the code-owner gate).
+- **Pinned scanner:** the live scan installs the pinned SHA (read in the Actions log of a PR scan on 2026-11-11: `pr-scanner@6adbd9c...`).
 - **Trust claim:** a PR that rewrites the scan step cannot disable the scan; the base-branch workflow ran and the forged step never did.
 
-## Real-world measurement (800 PRs, scanner at `3a676cf`)
+## Real-world measurement (800 PRs, scanner at `3a676cf`; historical, the false positives named here are since fixed)
 Data and hand labels: `realworld/`. All PRs are benign, so this measures false positives and noise only.
 
 | Outcome | PRs | Rate | 95% CI |
@@ -65,12 +68,14 @@ Of the 3 blocks, **2 are false positives** (0.29%, CI 0.08 to 1.1%), both `EXEC-
 Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 
 ### A. Detection quality (found by the real-world run)
-- **Done (branch `ci-inject-concurrency`): `CI-INJECT` on `concurrency.group`.** Narrower than the backlog idea ("only flag `run:` and `script:`"): an allowlist of non-script keys (`concurrency.group`, inline `concurrency:`, top-level `run-name:`), honoured only when the fetched head file proves where the line sits (so a fake `concurrency:` typed into a `run:` block, `group:` under `with:`, a continuation line, or a misaligned file all stay HIGH; no file context means no exemption). Other keys such as `name:` were left alone on purpose: a matrix value can reach a script later. Evidence: numpy#33227 blocks before and passes after through the real fetcher, plus 14 unit tests; no new sample run.
-- **Done (branch `ci-secrets-github-token`, owner decision 2026-11-10): `CI-SECRETS` `GITHUB_TOKEN` to `api.github.com`.** That one case is now MEDIUM (a warn). A secret to any other host, including a third-party API (PagerDuty), stays HIGH. Narrow by design: one line, only `GITHUB_TOKEN`, every URL exactly `https://api.github.com`, no re-routing flags. actions/cache#1699: 5 HIGH findings before, 2 after (the PagerDuty lines), so that PR still blocks, on purpose. Evidence is that PR and 17 unit tests (3 downgrades, 12 evasions that stay HIGH), not a sample.
+- **Done (#16): `CI-INJECT` on `concurrency.group`.** Narrower than the backlog idea ("only flag `run:` and `script:`"): an allowlist of non-script keys (`concurrency.group`, inline `concurrency:`, top-level `run-name:`), honoured only when the fetched head file proves where the line sits (so a fake `concurrency:` typed into a `run:` block, `group:` under `with:`, a continuation line, or a misaligned file all stay HIGH; no file context means no exemption). Other keys such as `name:` were left alone on purpose: a matrix value can reach a script later. Evidence: numpy#33227 blocks before and passes after through the real fetcher, plus 14 unit tests; no new sample run.
+- **Done (#15, owner decision 2026-11-10): `CI-SECRETS` `GITHUB_TOKEN` to `api.github.com`.** That one case is now MEDIUM (a warn). A secret to any other host, including a third-party API (PagerDuty), stays HIGH. Narrow by design: one line, only `GITHUB_TOKEN`, every URL exactly `https://api.github.com`, no re-routing flags. actions/cache#1699: 5 HIGH findings before, 2 after (the PagerDuty lines), so that PR still blocks, on purpose. Evidence is that PR and 17 unit tests (3 downgrades, 12 evasions that stay HIGH), not a sample.
 - **P2 `SCANNER-TAMPER` on CODEOWNERS.** Warn only on removals and on additions that can take over (a catch-all line, `.github/`, scanner paths); last matching pattern wins, so those are the dangerous ones.
 - **P2 `CI-PERMS` on `id-token: write`.** The recommended OIDC publishing setup; LOW when it is the only signal.
 - **P3 `CI-UNPINNED`.** `slsa-github-generator` must be referenced by tag; consider a documented exception. Tag pins of first-party actions are already LOW.
 - **P1 `EXEC-DROPPER` false positives found in the fresh sample (2 of 3 blocks).** (a) **Done 2026-11-10:** a test that spawns a dev server (`spawn('pnpm next dev')`) and `fetch()`es it no longer counts the spawn (narrow package-manager exemption, see `docs/rules.md`); the tailwindcss PR now passes. A "localhost URL" rule was considered and dropped: the URL there is read from the server's stdout, so it never appears as a literal. (b) **Done 2026-11-10 (scoped first):** a build script that downloads source, runs configure/make and `chmod +x`'s built libraries (psycopg2#1755) now warns (MEDIUM) instead of blocking. A pattern exemption was rejected because `chmod +x` is the only execute signal in shell, so any exempted pattern could be copied by an attacker; this is a severity cap that keeps the finding visible. Known cost: adding a `make` line downgrades a block to a warn. A reviewed suppression mechanism (FR-11) remains the better long-term release valve for false positives of this kind.
+- **P2 Gap: binary files added or changed in test or fixture paths are invisible** (xz test files). Candidate: a LOW or MEDIUM signal when binaries change and no source does. Found by `corpus_real`.
+- **P2 Gap: a new dependency is invisible** (event-stream: one line adding an unknown package). Needs data outside the diff (registry age, maintainers); relates to FR-07 and FR-18. Found by `corpus_real`.
 - **P2 `SCANNER-TAMPER` fires on a vendored CODEOWNERS** (`vendor/.../CODEOWNERS`, found in buildkit). Only the root, `.github/` and `docs/` locations are effective; look only at those.
 - **P3 Legitimate binary installers** (`install.sh` that downloads a prebuilt binary and `chmod +x`'s it, found in direnv) still block `EXEC-DROPPER`. This is the documented limit; a pattern exemption would be copyable by an attacker, so the answer is a reviewed suppression (FR-11), not a looser rule.
 - **P2 `CI-UNPINNED` Medium on tag-pinned third-party actions** is now 10 of 16 warns in the fresh sample (cibuildwheel bumps). Consider LOW for well-known publishers or when the PR only changes the version string.
@@ -91,12 +96,12 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 - **P2 Our own scan flags our own tests.** Attack-like literals in Python test files are, to the scanner, attack-like code; PR #3 was blocked on its first scan. Fixed for the new code by `tests/fixtures/snippets.txt` (data files are not read by `EXEC-DROPPER`); `tests/test_snippets.py` keeps listed files clean when scanned whole. Still inline, so edits near those lines will be flagged: `test_cli.py`, `test_rules_hooks.py`, the older half of `test_rules_dropper.py`, and `src/pr_scanner/rules/dropper.py` (its own regexes). Tests are never exempt from scanning: CI runs them.
 - **P1 Make `tests` a required status check** (CI exists since #4; branch protection change, ask first). Pin it to the GitHub Actions app like `PR scanner`.
 - **Keep PRs reviewable.** Merge with a plain `gh pr merge N --squash` once the scan passes (`--admin` is blocked, see branch protection). Split by concern, keep generated data separate and mark it `linguist-generated` (`.gitattributes`), and open each PR with a "where to look" guide.
-- **P3 Delete merged branches** on GitHub: `ci/run-tests`, `rules/dropper-proximity`, `realworld/runner`, `realworld/data-and-docs`, and `corpus/realworld-runner` (closed #3, kept as a backup). Ask first.
+- **P3 Delete merged branches** on GitHub: the branch of every merged PR (#4 to #18) and `corpus/realworld-runner` (closed #3, kept as a backup). Ask first.
 - **P2 Fresh real-world sample** after the next rule fixes (the current one is no longer independent for tuned rules).
 - **P2 Visual check of the Checks tab.** Only the API was read. Confirm the summary renders, the `<!-- x -->` annotation path shows as text, and `neutral` (WARN) and `action_required` (INCOMPLETE) look right.
 - **P2 Confirm the conclusion mapping:** WARN is `neutral` (passes required checks), INCOMPLETE is `action_required`, BLOCK and ERROR are `failure`.
 - **P2 Untested in Actions:** a PR from another account's fork, a genuinely incomplete scan, the missing-artifact fallback, the `report` job after a crashed `scan`.
-- **P2 Pin bumps are manual** and a stale pin means the Action runs old code. The bump PR is scanned by the old scanner. Consider a reminder or a check that compares the pin with `main`.
+- **P2 Pin bumps are manual** and a stale pin means the Action runs old code (#13 and the 774145e bump were done by hand, each as its own PR with one expected `SCANNER-TAMPER` warning). The bump PR is scanned by the old scanner. Consider a reminder or a check that compares the pin with `main`.
 - **P2 Standing warnings** on edits to the scanner workflow, `.pr-scanner.yml` or CODEOWNERS until a suppression flow (FR-11) exists.
 - **P3 Package the Action** (composite or Docker, versioned releases, adopter docs) so other repos do not copy the workflow. Later a GitHub App for org-wide installs and an audit store (FR-15).
 - **P3 Protection:** when a second maintainer exists, set approvals to 1, turn Code Owner review back on, and add them to CODEOWNERS. Guard the owner account (passkey, no stray `repo` tokens). Check that private vulnerability reporting (SECURITY.md) is switched on.
@@ -104,15 +109,15 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 ### D. Features not built
 - Suppression flow with authority and audit (FR-11, T-S07); config file read from the base branch (FR-12).
 - **Sock-puppet signal (FR-18, from the owner's incident):** new or low-history accounts commenting or approving on a PR with open findings, wording as a signal not an accusation. Findings cannot be cleared by comments (FR-19, already stated in every report).
-- Obfuscation rules (FR-06), dependency rules (FR-07: typosquats, new dependencies with install scripts, lockfile-only changes), exfiltration rules (FR-08), author-risk signals (FR-17).
+- Remaining obfuscation checks (FR-06: high-entropy strings, minified code in source directories, hidden Unicode; `EXEC-OBFUSCATED` covers decode-then-run only), dependency rules (FR-07: typosquats, new dependencies with install scripts, lockfile-only changes), exfiltration rules (FR-08), author-risk signals (FR-17).
 - Optional LLM triage that can only raise severity (FR-13), redacted and opt-in (NFR-05).
 - More ecosystems after npm and PyPI (Go, Rust, Maven): open question for the owner.
 
 ### E. Evidence still missing
-- **Recall on real attacks is unmeasured.** Build a verified, defanged corpus from documented public incidents (candidates: event-stream, tj-actions/changed-files, Ultralytics, nx "s1ngularity", Shai-Hulud, xz). Verify every reference through the API before using it; store references and defanged excerpts, never live payloads.
+- **Recall on real attacks: first measured 2026-11-10, 4 of 8 (`corpus_real/`, `docs/recall-real-attacks.md`).** Small n, reconstructed by the rule author, so an upper-leaning figure. Next: more cases (add new ones, do not re-score the old ones after tuning), an independently authored set, and cases for classes not yet covered (PR-title or branch-name injection, tarball-only payloads). References are verified through the API; only defanged excerpts are stored.
 - An independently authored adversarial set; targeted samples of install-script and workflow changes; a fresh benign sample per tuning round.
 - More incident detail from the owner (language, how it detected CI, where the binary went, how it was hidden) so fixtures can be faithful.
-- Success-metric targets in `docs/00` are provisional: now there is a baseline to set them from (about 1.75% false-positive block, 2% warn, 1.5% incomplete, all before tuning).
+- Success-metric targets in `docs/00` are provisional. Current baseline on presumed-benign PRs: strict blocked-benign (every block of a benign PR, correct ones included) 3 of 684 (0.44%) and 1 of 300 (0.33%), warn about 2%, incomplete about 3%; the first 800-PR sample was 1.9% blocked before any fix.
 - Mutation testing, coverage numbers, static analysis (bandit/semgrep), dependency audit (none needed: no dependencies).
 
 ### F. Housekeeping (outside the repo)
@@ -133,6 +138,7 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 
 ## Decisions and open questions for the owner
 - Decided: rules first, LLM optional; never execute PR code; trust model ADR-0005 (base-branch workflow, two jobs, untrusted artifact); branch protection binding on everyone including the owner (0 approvals while solo, scan required, `enforce_admins` on); scanner pinned by commit SHA from this repo.
+- Decided 2026-11-11: Apache-2.0 license, copyright held by the owner.
 - Open: final language (ADR-0002); WARN as `neutral`; which ecosystems next; the original incident's details; whether and when to add a second maintainer; ~~how to treat third-party-API secrets in `CI-SECRETS`~~ (decided 2026-11-10: stay High).
 
 ## Session log
@@ -141,12 +147,15 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 - **Session 4 (2026-11-09, evening):** pushed PR #3, opened PR #4 (CI), then split #3 into #5-#7 for review; changed branch protection so the owner cannot skip the scan; reviewed and merged #4-#7 (two runner bugs fixed in review); diagnosed the `pull_request_target` brownout and added the Actions policy; moved attack-like test literals to a fixture file after our own scan blocked PR #3.
 - **Session 3 (2026-11-09):** wired incomplete fetches into the verdict; reporter with escaping (verified on real GitHub); ADR-0005; `report_io`, `scan`, `report`, publisher; the workflow, rehearsed on a fork; `SCANNER-TAMPER` (found by the rehearsal); CODEOWNERS and branch protection; first real PRs through this repo; real-world runner and the 800-PR measurement; `EXEC-DROPPER` bundle fix; documentation refresh.
 
+- **Session 5 (2026-11-10 to 11-11):** real-attack recall corpus (4/8), `EXEC-OBFUSCATED`, a fresh 684-PR sample and a 300-PR build-script sample, `EXEC-DROPPER`, `CI-SECRETS` and `CI-INJECT` false-positive fixes, strict NFR-03 accounting, About section, Apache-2.0 license, README rewrite, pin bump; #9 to #18 merged.
+
 ## How to resume
 ```
 cd pr_scanner && git checkout main && git pull
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m pytest                                  # 852 tests
-.venv/bin/python -m pytest -m perf                          # 24 slow tests, about 2.5 min
+.venv/bin/python -m pytest                                  # 928 tests
+.venv/bin/python -m pytest -m perf                          # 31 slow tests, about 2.5 min
 .venv/bin/python -m pr_scanner.corpus corpus                # in-repo corpus metrics
+.venv/bin/python -m pr_scanner.corpus corpus_real           # real-attack corpus (do not tune on it)
 ```
-Suggested order: make `tests` a required check, fix `CI-INJECT` and `CI-SECRETS` in separate PRs (A), optimise `EXEC-DROPPER` and raise the byte cap (B), take a fresh real-world sample (new repos welcome), then start the real-attack corpus (E).
+Suggested order: (1) merge the open pin-bump and copyright PRs if they are still open, and check the next scan log installs the new pin; (2) make `tests` a required check (ask first); (3) `SCANNER-TAMPER` on vendored CODEOWNERS; (4) `CI-UNPINNED` noise on tag-pinned actions; (5) the two recall gaps (binary changes, new dependencies); (6) the 5 MiB cap and bundle INCOMPLETEs, and record why a scan is incomplete; (7) a fresh sample after those fixes. Owner items: the original incident's details, the fork red-team (including the split-across-3-PRs test), deleting merged branches, and verifying the Actions policy on the first PR scan after 2026-12-02.
