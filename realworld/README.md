@@ -23,3 +23,6 @@ Reproduce: `GITHUB_TOKEN=... python -m pr_scanner.realworld run --manifest realw
 
 ## Validation sample (2026-11-10)
 543 PRs from 28 further repositories (`*-2026-11-10-validation.json`), scanned at `d5337cd` to check the `EXEC-DROPPER` package-manager-spawn exemption on repos not used before. 0 blocks, 6 warns (all workflow rules), 0 incomplete, 0 errors; no `EXEC-DROPPER` finding at all, so it cannot show whether the exemption fired. Evidence snippets are stripped.
+
+## Build-script sample (2026-11-10)
+300 PRs from 12 further repositories chosen for shell build scripts (`*-2026-11-10-build-scripts.json`), scanned at `861abb1`. 295 pass, 4 warn, 1 block (a prebuilt-binary installer, rule-correct), 0 incomplete, 0 errors. The new source-build cap did not fire on any PR here. Evidence snippets are stripped.
