@@ -63,7 +63,7 @@ Of the 3 blocks, **2 are false positives** (0.29%, CI 0.08 to 1.1%), both `EXEC-
 Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 
 ### A. Detection quality (found by the real-world run)
-- **P1 `CI-INJECT` on non-script contexts.** Fires on `concurrency.group: ${{ ... github.head_ref ... }}`. Only flag expansion inside `run:` and `github-script` `script:`.
+- **Done (branch `ci-inject-concurrency`): `CI-INJECT` on `concurrency.group`.** Narrower than the backlog idea ("only flag `run:` and `script:`"): an allowlist of non-script keys (`concurrency.group`, inline `concurrency:`, top-level `run-name:`), honoured only when the fetched head file proves where the line sits (so a fake `concurrency:` typed into a `run:` block, `group:` under `with:`, a continuation line, or a misaligned file all stay HIGH; no file context means no exemption). Other keys such as `name:` were left alone on purpose: a matrix value can reach a script later. Evidence: numpy#33227 blocks before and passes after through the real fetcher, plus 14 unit tests; no new sample run.
 - **P1 `CI-SECRETS` false positives.** `${{ secrets.GITHUB_TOKEN}}` (no space before `}}`) sent to `api.github.com` is flagged HIGH; recognise the spelling and the host. Secrets to a third-party API (PagerDuty) stay HIGH or drop to MEDIUM: decide.
 - **P2 `SCANNER-TAMPER` on CODEOWNERS.** Warn only on removals and on additions that can take over (a catch-all line, `.github/`, scanner paths); last matching pattern wins, so those are the dangerous ones.
 - **P2 `CI-PERMS` on `id-token: write`.** The recommended OIDC publishing setup; LOW when it is the only signal.
