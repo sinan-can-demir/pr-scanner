@@ -2,6 +2,7 @@ import pytest
 
 from pr_scanner.models import ChangedFile, Diff, Severity
 from pr_scanner.rules import default_registry
+from tests.snippets import snippet
 from pr_scanner.rules.workflows import (
     ActionPinning,
     PermissionsWidening,
@@ -236,6 +237,26 @@ def test_new_plain_secret_use_is_low():
 
 def test_github_token_use_is_not_reported():
     assert run(SecretExposure, wf("          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}")) == []
+
+
+# The GITHUB_TOKEN sent to api.github.com is the one narrow downgrade (a real false positive,
+# actions/cache#1699). The lines live in tests/fixtures/snippets.txt, see the comment there.
+def _sx(name):
+    return "        " + snippet(name)
+
+
+@pytest.mark.parametrize("name", ["gt_ok_1", "gt_ok_2", "gt_ok_3"])
+def test_github_token_to_api_github_com_is_medium_not_high(name):
+    assert one(SecretExposure, wf(_sx(name))).severity == Severity.MEDIUM
+
+
+def test_a_third_party_api_token_stays_high():
+    assert one(SecretExposure, wf(_sx("gt_pagerduty"))).severity == Severity.HIGH
+
+
+@pytest.mark.parametrize("i", range(1, 13))
+def test_github_token_downgrade_does_not_cover_these(i):
+    assert one(SecretExposure, wf(_sx(f"gt_bad_{i}"))).severity >= Severity.HIGH
 
 
 def test_secrets_inherit_is_medium():

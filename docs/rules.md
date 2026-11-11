@@ -103,6 +103,7 @@ Known limits: same file only; added lines only; payloads in binary files or tarb
 | | Low | other `write` scopes |
 | `CI-SECRETS` | Critical | `toJSON(secrets)` |
 | | High | secret on a line that also encodes or sends it (`curl`, `wget`, `nc`, `base64`, URL); `printenv \| ...` |
+| | Medium | the built-in `GITHUB_TOKEN` (and no other secret) sent with `curl`/`wget` to `https://api.github.com` and nowhere else on the line: no userinfo or lookalike host, no second URL, no `--resolve`/`--connect-to`/proxy flag, no `base64`/`nc`. Anything else, including a third-party API token, stays High |
 | | Medium | `secrets: inherit` |
 | | Low | any other newly referenced secret (the built-in `GITHUB_TOKEN` is not reported) |
 | `CI-PIPE-SH` | High (Critical for a raw IP) | download piped into a shell/interpreter, `bash <(curl ...)`, `sh -c "$(curl ...)"`, `iex (iwr ...)`; quote-splitting is normalised |
