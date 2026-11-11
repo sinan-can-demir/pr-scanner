@@ -56,6 +56,7 @@ Of the 3 blocks, **2 are false positives** (0.29%, CI 0.08 to 1.1%), both `EXEC-
 - **Incomplete (19):** 14 compiled bundles (3.9 to 8.8 MB, `dist/index.cjs`, all from `docker/*` and `actions/*` repos), 1 PR with 1,855 files (over the 1000-file cap), 4 old PRs whose head repository is gone (sampling artifact). The runner does not record *why* a scan was incomplete; checked on one 3.9 MB bundle: incomplete with and without `EXEC-OBFUSCATED`.
 - **`EXEC-OBFUSCATED`:** 10 hits, all LOW on `docker/*` `dist/index.cjs` bundles, so **no change to any outcome and 0 hits on any non-bundle file**. It adds about 50% to scan time on bundles (4.6 s to 7.1 s on a 3.9 MB one), far inside the 60 s budget.
 - **Transport:** 6 PRs first failed with `URLError` (a flaky connection mid-run) and were re-run once; they are counted with their re-run result.
+- **Validation of the package-manager-spawn fix (`d5337cd`), 543 PRs from 28 further new repos:** 537 pass, 6 warn (4 tag-pinned actions, 2 `contents: write` in release jobs), 0 block, 0 incomplete, 0 error (95% upper bound for blocks about 0.7%). No `EXEC-DROPPER` finding at all, so this shows no new false positives but **cannot show the exemption mattered**; a before/after scan with `main`'s code would. Data: `realworld/*-2026-11-10-validation.json`.
 - **Limits of this evidence:** 10 of the 14 bundle PRs come from 3 related repos, so bundle numbers are not independent draws; 1 reviewer labelled everything and also wrote the rules.
 
 ## Backlog

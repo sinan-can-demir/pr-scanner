@@ -1,0 +1,29 @@
+{
+ "labels": {
+  "celery/celery#11061": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (CI-UNPINNED Medium); policy finding, benign PR (useblacksmith/setup-docker-builder)"
+  },
+  "kubernetes/minikube#23996": {
+   "label": "noise",
+   "cause": "contents: write in a publish/release workflow (CI-PERMS Medium); routine, the job needs it"
+  },
+  "mochajs/mocha#6388": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (CI-UNPINNED Medium); policy finding, benign PR (OctoGuide/bot)"
+  },
+  "parcel-bundler/parcel#10145": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (CI-UNPINNED Medium); policy finding, benign PR (4 actions in the release workflow)"
+  },
+  "remix-run/react-router#15739": {
+   "label": "rule-correct",
+   "cause": "third-party action pinned by tag, not SHA (CI-UNPINNED Medium); policy finding, benign PR (pnpm/action-setup, 12 occurrences)"
+  },
+  "scrapy/scrapy#8470": {
+   "label": "noise",
+   "cause": "contents: write in a publish/release workflow (CI-PERMS Medium); routine, the job needs it"
+  }
+ },
+ "note": "Hand labels for all 6 warn PRs of the validation sample (2026-11-10). 543 PRs, 28 repos not in the first two samples; 0 blocks, 0 incomplete, 0 errors, no EXEC-DROPPER or EXEC-OBFUSCATED findings. Scanned at d5337cd (package-manager spawn exemption). Presumed-benign PRs: measures noise, not recall; it cannot show whether the exemption fired, since no EXEC finding appeared."
+}

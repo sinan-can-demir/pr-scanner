@@ -20,3 +20,6 @@ Reproduce: `GITHUB_TOKEN=... python -m pr_scanner.realworld run --manifest realw
 
 ## Second, fresh sample (2026-11-10)
 684 PRs from 35 repositories that were **not** in the first sample, scanned at `e95f51e` (`sample-`, `results-` and `labels-2026-11-10.json`). Evidence snippets are stripped from the results. 6 PRs that first failed with a connection error were re-run once and are recorded with the re-run result. Numbers and caveats: `docs/PROGRESS.md`.
+
+## Validation sample (2026-11-10)
+543 PRs from 28 further repositories (`*-2026-11-10-validation.json`), scanned at `d5337cd` to check the `EXEC-DROPPER` package-manager-spawn exemption on repos not used before. 0 blocks, 6 warns (all workflow rules), 0 incomplete, 0 errors; no `EXEC-DROPPER` finding at all, so it cannot show whether the exemption fired. Evidence snippets are stripped.
