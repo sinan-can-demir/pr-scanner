@@ -9,7 +9,7 @@ Test types: U unit, P property, C corpus, I integration, A adversarial, F fuzz, 
 | FR-03 | UC-01, UC-05 | n/a | U, I |
 | FR-04 | UC-01 | T-D01 | U, C, A (implemented: HOOK-NPM, HOOK-PYSETUP, HOOK-PYBACKEND; see rules.md) |
 | FR-05 | UC-01 | T-D03, T-D07, T-D08 | U, C, A, Perf (implemented: CI-PRT, CI-UNPINNED, CI-PERMS, CI-SECRETS, CI-PIPE-SH, CI-INJECT; SCANNER-TAMPER covers T-D12 for the scanner workflow, `.pr-scanner.yml` and CODEOWNERS) |
-| FR-06 | UC-01 | T-D02, T-D09, T-D10, T-D13 | U, C, A, F |
+| FR-06 | UC-01 | T-D02, T-D09, T-D10, T-D13 | U, C, A, F (partial: `EXEC-OBFUSCATED` covers decode-then-run, T-D02 and T-D16; not built: high-entropy strings, minified code, hidden Unicode, binary-file signal) |
 | FR-07 | UC-01 | T-D04, T-D05, T-D06 | U, C |
 | FR-08 | UC-01 | T-D07, T-D13 | U, C |
 | FR-09 | UC-01, UC-02 | n/a | I, E2E (implemented: `tests/test_reporter.py`, `test_report_io.py`, `test_publisher.py`, `test_cli.py`; rehearsed in Actions on a fork; the Checks tab was read through the API, not visually) |
