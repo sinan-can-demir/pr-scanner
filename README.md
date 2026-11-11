@@ -56,3 +56,6 @@ See also [Progress log](docs/PROGRESS.md) for current status, known gaps and nex
 - **Phase 1 (mostly done):** diff ingestion, rule engine, install-hook, dropper, CI and scanner-tamper rules, corpus. Open: obfuscation (FR-06) and dependency (FR-07) rules, dropper cross-file correlation
 - **Phase 2 (mostly done):** GitHub Action wrapper, check run and annotations, trust model. Open: CI that runs this repository's own tests, packaging for other repositories
 - **Phase 3 (planned):** suppressions (FR-11), config (FR-12), sock-puppet signal (FR-18), GitHub App, optional LLM triage
+
+## License
+Apache License 2.0, see [LICENSE](LICENSE). The code is open for anyone to use, and the project is maintained by its author.
