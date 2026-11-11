@@ -106,11 +106,13 @@ Known limits: same file only; added lines only; payloads in binary files or tarb
 | | Low | other `write` scopes |
 | `CI-SECRETS` | Critical | `toJSON(secrets)` |
 | | High | secret on a line that also encodes or sends it (`curl`, `wget`, `nc`, `base64`, URL); `printenv \| ...` |
+| | Medium | the built-in `GITHUB_TOKEN` (and no other secret) sent with `curl`/`wget` to `https://api.github.com` and nowhere else on the line: no userinfo or lookalike host, no second URL, no `--resolve`/`--connect-to`/proxy flag, no `base64`/`nc`. Anything else, including a third-party API token, stays High |
 | | Medium | `secrets: inherit` |
 | | Low | any other newly referenced secret (the built-in `GITHUB_TOKEN` is not reported) |
 | `CI-PIPE-SH` | High (Critical for a raw IP) | download piped into a shell/interpreter, `bash <(curl ...)`, `sh -c "$(curl ...)"`, `iex (iwr ...)`; quote-splitting is normalised |
 | `CI-INJECT` | High | attacker-controlled context (`pull_request.title/body/head.ref`, `issue.body`, `comment.body`, `head_ref`, commit messages/author names/emails, ...) expanded directly in a script or `github-script` |
 | | none | passing it through `env:`/`with:` as a whole-value assignment (the recommended safe pattern) |
+| | none | the label keys `concurrency.group`, an inline `concurrency:` and a top-level `run-name:`, but only when the head file proves the line is that key (not text inside a script block, not `group:` under `with:`). Without the file context they still fire |
 
 Known limits: line-based, so values split over several lines (YAML folded scalars) are missed; the key under `permissions:` is not verified to be in a `permissions` block; removed restrictions (deleting a `permissions:` block) are not yet reported; GitLab/CircleCI/Jenkins files only get `CI-PIPE-SH`; expression functions that rebuild a tainted value (`format(...)`) are not tracked.
 

@@ -65,8 +65,8 @@ Of the 3 blocks, **2 are false positives** (0.29%, CI 0.08 to 1.1%), both `EXEC-
 Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 
 ### A. Detection quality (found by the real-world run)
-- **P1 `CI-INJECT` on non-script contexts.** Fires on `concurrency.group: ${{ ... github.head_ref ... }}`. Only flag expansion inside `run:` and `github-script` `script:`.
-- **P1 `CI-SECRETS` false positives.** `${{ secrets.GITHUB_TOKEN}}` (no space before `}}`) sent to `api.github.com` is flagged HIGH; recognise the spelling and the host. Secrets to a third-party API (PagerDuty) stay HIGH or drop to MEDIUM: decide.
+- **Done (branch `ci-inject-concurrency`): `CI-INJECT` on `concurrency.group`.** Narrower than the backlog idea ("only flag `run:` and `script:`"): an allowlist of non-script keys (`concurrency.group`, inline `concurrency:`, top-level `run-name:`), honoured only when the fetched head file proves where the line sits (so a fake `concurrency:` typed into a `run:` block, `group:` under `with:`, a continuation line, or a misaligned file all stay HIGH; no file context means no exemption). Other keys such as `name:` were left alone on purpose: a matrix value can reach a script later. Evidence: numpy#33227 blocks before and passes after through the real fetcher, plus 14 unit tests; no new sample run.
+- **Done (branch `ci-secrets-github-token`, owner decision 2026-11-10): `CI-SECRETS` `GITHUB_TOKEN` to `api.github.com`.** That one case is now MEDIUM (a warn). A secret to any other host, including a third-party API (PagerDuty), stays HIGH. Narrow by design: one line, only `GITHUB_TOKEN`, every URL exactly `https://api.github.com`, no re-routing flags. actions/cache#1699: 5 HIGH findings before, 2 after (the PagerDuty lines), so that PR still blocks, on purpose. Evidence is that PR and 17 unit tests (3 downgrades, 12 evasions that stay HIGH), not a sample.
 - **P2 `SCANNER-TAMPER` on CODEOWNERS.** Warn only on removals and on additions that can take over (a catch-all line, `.github/`, scanner paths); last matching pattern wins, so those are the dangerous ones.
 - **P2 `CI-PERMS` on `id-token: write`.** The recommended OIDC publishing setup; LOW when it is the only signal.
 - **P3 `CI-UNPINNED`.** `slsa-github-generator` must be referenced by tag; consider a documented exception. Tag pins of first-party actions are already LOW.
@@ -133,7 +133,7 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 
 ## Decisions and open questions for the owner
 - Decided: rules first, LLM optional; never execute PR code; trust model ADR-0005 (base-branch workflow, two jobs, untrusted artifact); branch protection binding on everyone including the owner (0 approvals while solo, scan required, `enforce_admins` on); scanner pinned by commit SHA from this repo.
-- Open: final language (ADR-0002); WARN as `neutral`; which ecosystems next; the original incident's details; whether and when to add a second maintainer; how to treat third-party-API secrets in `CI-SECRETS`.
+- Open: final language (ADR-0002); WARN as `neutral`; which ecosystems next; the original incident's details; whether and when to add a second maintainer; ~~how to treat third-party-API secrets in `CI-SECRETS`~~ (decided 2026-11-10: stay High).
 
 ## Session log
 - **Session 1 (2026-11-02):** docs, threat model, engine, parser, 10 rules, corpus.

