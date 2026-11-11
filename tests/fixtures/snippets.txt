@@ -37,3 +37,11 @@ pm_fetch_py: html = requests.get(url).text
 pm_download_js: https.get('https://example.invalid/b', cb)
 pm_spawn_helper: spawn('/tmp/.helper')
 pm_spawn_next_dev: spawn('pnpm next dev')
+sh_curl_tar: curl -sL "https://example.invalid/dist/src.tar.gz" | tar xzf -
+sh_curl_tar_ip: curl -sL http://203.0.113.9/src.tar.gz | tar xzf -
+sh_configure: ./configure --prefix="$PREFIX" && make install
+sh_chmod_libs: chmod +x ${PREFIX}/lib/{libldap,liblber}*.${suffix}*
+sh_chmod_tmp: chmod +x /tmp/tool
+sh_ci_check: if [ -z "$CI" ]; then
+sh_fi: fi
+sh_python_spawn: python3 -c "import subprocess; subprocess.run(['/tmp/x'])"
