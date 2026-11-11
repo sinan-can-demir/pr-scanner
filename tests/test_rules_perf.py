@@ -47,6 +47,8 @@ PAYLOADS = {
     "curl-then-pipes": "curl " + "| " * 100_000,
     "spaces-then-keyword": " " * 300_000 + "postinstall",
     "ip-like": "1.2.3." * 50_000,
+    "pm-spawn-repeat": "spawn('npm run " * 20_000,
+    "pm-spawn-unclosed-repeat": "execSync('pnpm " * 17_000,
     "base64-repeat": "base64 " * 30_000,
     "eval-space-repeat": "eval " * 40_000,
     "pipe-sudo-repeat": "| sudo " * 30_000,

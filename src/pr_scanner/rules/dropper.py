@@ -69,6 +69,38 @@ _RAW_IP_URL = re.compile(r"(?:https?|ftp)://\d{1,3}(?:\.\d{1,3}){3}\b|(?:https?|
 LARGE_FILE_CODE_CHARS = 100_000  # real bundles: 0.7-3.3 MB; real droppers and fixtures: under 1 KB
 WINDOW_CODE_CHARS = 3_000  # real bundles: signals 6.8k-1.2M apart; real droppers: under 200
 
+# A spawn of a package-manager script ("pnpm next dev", "npm run build") is how tests and tools start dev
+# servers; it does not run a downloaded binary. Found as a false positive in a fresh real-world sample
+# (a test that spawned a dev server and fetch()ed it). Only an exact, plain command qualifies: anything
+# with a URL, a path, a shell operator, an interpolation, or a subcommand that fetches or installs code
+# (npx, dlx, exec, install, add...) still counts as a spawn.
+_PM_START = re.compile(r"""\s*\(?\s*\[?\s*["'`](?:pnpm|npm|yarn|bun)(?:\.cmd)?\b""")
+_PM_UNSAFE_CHARS = re.compile(r"[:/\\$`{}&|;<>*~@]")
+_PM_UNSAFE_WORDS = frozenset({
+    "install", "i", "add", "dlx", "exec", "x", "create", "init", "link", "update", "up", "upgrade",
+    "publish", "pack", "config", "set", "login", "npx", "remove", "rm", "uninstall", "global", "-g", "--global",
+    "run-script",
+})
+_PM_LOOKAHEAD = 300  # bounded: a hostile line must not make this quadratic
+
+
+def _is_package_manager_spawn(line: str, call_end: int) -> bool:
+    """True if the process-spawn call ending at ``call_end`` runs a plain package-manager script."""
+    rest = line[call_end:call_end + _PM_LOOKAHEAD]
+    m = _PM_START.match(rest)
+    if m is None:
+        return False
+    tail = rest[m.end():]
+    close = tail.find(")")
+    if close < 0:
+        return False  # call not closed within the window: unclear, keep the signal
+    args = tail[:close]
+    if _PM_UNSAFE_CHARS.search(args):
+        return False
+    words = re.findall(r"[A-Za-z0-9_.-]+", args)
+    return not any(w.lower() in _PM_UNSAFE_WORDS for w in words)
+
+
 _FILLER = re.compile("[\\s\u00ad\u200b-\u200f\u2060-\u206f\ufeff]+")
 _KINDS = (
     ("spawn", _SPAWN),
@@ -107,7 +139,12 @@ def _scan_signals(f: ChangedFile) -> tuple[dict[str, list[tuple[int, int]]], int
         if raw.lstrip().startswith(_COMMENT_PREFIXES):
             continue
         s = cap(raw)
-        found = [(m.start(), kind) for kind, rx in _KINDS for m in rx.finditer(s)]
+        found = [
+            (m.start(), kind)
+            for kind, rx in _KINDS
+            for m in rx.finditer(s)
+            if not (kind == "spawn" and _is_package_manager_spawn(s, m.end()))
+        ]
         masked = _mask_block_comments(s)
         if not found:
             code += len(_FILLER.sub("", masked))

