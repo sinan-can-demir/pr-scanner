@@ -92,6 +92,11 @@ def _install_sources(lines: Sequence[tuple[int, str]]) -> list[tuple[int, str, r
     return out
 
 
+def _is_effective_codeowners(path: str) -> bool:
+    """GitHub reads CODEOWNERS only at the root, in .github/ and in docs/ (not in vendored copies)."""
+    return _norm(path) in {"codeowners", ".github/codeowners", "docs/codeowners"}
+
+
 def _repo_id(m: re.Match[str]) -> str:
     return f"{m.group(3)}/{m.group(4)}".lower()
 
@@ -111,8 +116,13 @@ class ScannerTamper(Rule):
             base = posixpath.basename(_norm(f.path))
             if kind == FileKind.SCANNER_CONFIG and base.startswith(".pr-scanner"):
                 out.extend(self._policy_file(f))
-            elif kind == FileKind.SCANNER_CONFIG and base == "codeowners":
+            elif kind == FileKind.SCANNER_CONFIG and base == "codeowners" and _is_effective_codeowners(f.path):
                 out.extend(self._codeowners(f))
+            if f.old_path is not None and f.old_path != f.path and _is_effective_codeowners(f.old_path) \
+                    and not _is_effective_codeowners(f.path):
+                out.append(_finding(self, f, 1, f"renamed from {f.old_path}", Severity.HIGH,
+                                    "CODEOWNERS is moved to a place GitHub does not read, which removes the owner "
+                                    "review it enforces.", "Keep CODEOWNERS at the root, in .github/ or in docs/.", 0.9))
             if f.old_path is not None and f.old_path != f.path:
                 out.extend(self._renamed(f))
             if _is_github_workflow(f.path):
