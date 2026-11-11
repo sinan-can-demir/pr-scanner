@@ -26,6 +26,7 @@ Full tables, labels and caveats: [Progress](docs/PROGRESS.md) and [recall on rea
 
 ## What it does not do
 - It does not run or sandbox code, so it cannot see what a payload does, only what the diff looks like.
+- It scans pull-request diffs only, not code already in the repository; pair it with a repository-wide scanner in CI.
 - It does not see binaries, tarballs, or a dependency being added (see above).
 - Legitimate installers that download a binary and `chmod +x` it are blocked; the plan is reviewed suppressions, not looser rules.
 - Very large diffs (over 5 MiB) are reported as incomplete, never as a silent pass.

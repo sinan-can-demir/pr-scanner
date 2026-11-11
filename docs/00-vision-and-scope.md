@@ -19,6 +19,7 @@ A fast, trustworthy first line of defense that flags the changes in a PR most li
 - NG3: Not a replacement for human review, branch protection or signed commits.
 - NG4: Not a post-merge or runtime detector (initially).
 - NG5: Not attributing attackers.
+- NG6: Not a whole-repository or full-history scanner (decided 2026-11-11). It reads the diff of each pull request; code that is already in the repository is out of scope and is left to other scanners run in CI. The real-world runner scans past PRs for measurement only.
 
 ## Scope
 **In:** diffs of text files, manifests and lockfiles of common ecosystems (npm, PyPI first), GitHub Actions workflows, build/install scripts, PR metadata (author age and history signals).
