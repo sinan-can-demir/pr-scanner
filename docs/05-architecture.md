@@ -36,8 +36,8 @@ flowchart TB
 | Event Ingress | Validate event/signature, map to ScanRequest | FR-01, T-S08 |
 | Diff Fetcher | Pull diff and metadata via API (`github_client.py`, `fetcher.py`); diff requested by immutable base...head SHAs; enforce size limits; incomplete results are flagged, never empty | FR-02, NFR-06 |
 | Normaliser | Decode, strip/flag Unicode tricks, classify file type, extract added lines | T-D09, T-S01 |
-| Rule Engine | Run rules in isolation with per-rule timeout; collect Findings | FR-03, NFR-07 |
-| Rule pack | Rules grouped by domain: hooks, ci, obfuscation, deps, exfil | FR-04..08 |
+| Rule Engine | Run rules in isolation; collect Findings. The time budget is checked between rules, **per-rule timeout not built yet** (T-S03) | FR-03, NFR-07 |
+| Rule pack | Rules grouped by domain: hooks, ci, obfuscation, deps, exfil (built: hooks, dropper, ci, obfuscation, scanner; **not built:** deps, exfil) | FR-04..08 |
 | Policy and Verdict | Severity to verdict; suppressions; config | FR-11, FR-12, FR-14 |
 | LLM Triage | Optional, redacted context only; cannot lower severity | FR-13, T-S02 |
 | Reporter | Check run, annotations, summary (`reporter.py`): all PR-derived text escaped, hidden characters shown as markers, size caps | FR-09, FR-10, T-S05 |

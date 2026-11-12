@@ -14,7 +14,7 @@ The owner has no strong preference. Needs: text/diff processing, good test tooli
 | Go | Single static binary, fast, strong safety | Slower iteration for heuristics; fewer test-tooling options |
 
 ## Decision (provisional)
-Python 3.12+ for the engine; ship as a Docker-based GitHub Action. Revisit before Phase 2 if performance (NFR-02) or packaging becomes a problem. Keep the core free of GitHub-specific code so a port stays feasible.
+Python 3.12+ for the engine; ship as a Docker-based GitHub Action. *(Status note 2026-11-11: as built, the workflow installs the package with `pip` from a pinned commit SHA of this repository; there is no Docker image or packaged Action yet.)* Revisit before Phase 2 if performance (NFR-02) or packaging becomes a problem. Keep the core free of GitHub-specific code so a port stays feasible.
 
 ## Consequences
 - Use `uv`/pip with hash-locked requirements (NFR-10).

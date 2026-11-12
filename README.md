@@ -36,7 +36,7 @@ Full tables, labels and caveats: [Progress](docs/PROGRESS.md) and [recall on rea
 ```
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/python -m pytest                          # the default suite
-.venv/bin/python -m pytest -m perf                  # adversarial performance, ~2 min, run in CI
+.venv/bin/python -m pytest -m perf                  # adversarial performance, ~2.5 min, run in CI
 .venv/bin/python -m pr_scanner.corpus corpus        # recall / false-positive report on the in-repo corpus
 ```
 Scan one pull request (read-only; the token comes from the environment, never from argv):
@@ -53,6 +53,8 @@ GITHUB_TOKEN=... .venv/bin/python -m pr_scanner.realworld run --manifest manifes
 
 ## Using it in a repository
 Copy `.github/workflows/pr-scan.yml` (it explains why `pull_request_target` is safe there), pin the scanner to a commit SHA of this repository, then protect the branch as described in [Branch protection](docs/branch-protection.md). Without owner review on the workflow, `.pr-scanner.yml` and `CODEOWNERS`, a merged change could switch the scan off. There is no packaged Action yet.
+
+**GitHub is changing the default for `pull_request_target` on 2026-12-02.** From that date public repositories block it by default, so a copied workflow can fail at startup. This repository handles it with a repository Actions policy (Settings > Actions > Policies) that allows only `pull_request_target`, only for `.github/workflows/pr-scan.yml`; every adopter needs the same policy. That it suppresses the default block is **not yet confirmed**: it will be checked on the first PR scan after 2026-12-02.
 
 ## Principles
 1. **Never execute PR code.** Analysis is static, on the diff only (ADR-0004).

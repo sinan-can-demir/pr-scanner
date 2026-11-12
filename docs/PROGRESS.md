@@ -1,6 +1,6 @@
 # Progress log
 
-Last updated: 2026-11-11, session 5 (continued). Resume here.
+Last updated: 2026-11-11, session 5 (continued; docs audit). Resume here.
 
 ## Where we are
 
@@ -19,14 +19,14 @@ Runs end to end as a GitHub Action: live on this repository, rehearsed on a thro
 | Protection of this repo | Branch protection and CODEOWNERS applied (`docs/branch-protection.md`). Since 2026-11-09: 0 approvals, `PR scanner` required, **enforced on admins**, so no merge skips the scan. |
 | Real-world runner | `python -m pr_scanner.realworld`, plus data in `realworld/`. |
 | CI | `.github/workflows/tests.yml` runs the default suite on every PR and push to `main`, `pytest -m perf` weekly and on demand. Packages pinned by hash. 12 property tests guard it. **Not yet a required check.** |
-| Merged 2026-11-10 to 11-11 | #9 real-attack recall corpus, #10 `EXEC-OBFUSCATED`, #11 fresh real-world sample, #12 and #14 `EXEC-DROPPER` false-positive fixes, #13 scanner pin bump, #15 `CI-SECRETS` fix, #16 `CI-INJECT` fix, #17 Apache-2.0 license, #18 README refresh. |
+| Merged 2026-11-10 to 11-11 | #19 scanner pin bump to `774145e`, #20 license copyright line, #21 docs refresh, #9 real-attack recall corpus, #10 `EXEC-OBFUSCATED`, #11 fresh real-world sample, #12 and #14 `EXEC-DROPPER` false-positive fixes, #13 scanner pin bump, #15 `CI-SECRETS` fix, #16 `CI-INJECT` fix, #17 Apache-2.0 license, #18 README refresh. |
 | Merged 2026-11-09 | #4 (CI), #5 (`EXEC-DROPPER` bundle fix), #6 (real-world runner, plus two resume and summary fixes found in review), #7 (this data and docs). #3 was closed and split into #5-#7 for review (16k lines, 92% JSON). |
 
 ## Verified on real systems (2026-11-09)
 - **Fetcher and engine** on 800 recent merged PRs from 32 public repos (14,421 files, 0 fetch errors).
 - **Reporter** against GitHub's Markdown renderer (mentions, links, issue and commit references, HTML and hidden characters all inert after one fix) and a real check run with 27 annotations.
 - **Action** in GitHub Actions on a fork (benign PASS, malicious BLOCK, workflow-tamper BLOCK after `SCANNER-TAMPER`) and on this repo (PR #1 and #2 passed the scan and were held by the code-owner gate).
-- **Pinned scanner:** the live scan installs the pinned SHA (read in the Actions log of a PR scan on 2026-11-11: `pr-scanner@6adbd9c...`).
+- **Pinned scanner:** the live scan installs the pinned SHA (first read in the Actions log on 2026-11-11 as `pr-scanner@6adbd9c...`; the pin has since moved to `774145e` in #19).
 - **Trust claim:** a PR that rewrites the scan step cannot disable the scan; the base-branch workflow ran and the forged step never did.
 
 ## Real-world measurement (800 PRs, scanner at `3a676cf`; historical, the false positives named here are since fixed)
@@ -96,7 +96,7 @@ Priority: **P1** do next, **P2** soon, **P3** later or if wanted.
 - **P2 Our own scan flags our own tests.** Attack-like literals in Python test files are, to the scanner, attack-like code; PR #3 was blocked on its first scan. Fixed for the new code by `tests/fixtures/snippets.txt` (data files are not read by `EXEC-DROPPER`); `tests/test_snippets.py` keeps listed files clean when scanned whole. Still inline, so edits near those lines will be flagged: `test_cli.py`, `test_rules_hooks.py`, the older half of `test_rules_dropper.py`, and `src/pr_scanner/rules/dropper.py` (its own regexes). Tests are never exempt from scanning: CI runs them.
 - **P1 Make `tests` a required status check** (CI exists since #4; branch protection change, ask first). Pin it to the GitHub Actions app like `PR scanner`.
 - **Keep PRs reviewable.** Merge with a plain `gh pr merge N --squash` once the scan passes (`--admin` is blocked, see branch protection). Split by concern, keep generated data separate and mark it `linguist-generated` (`.gitattributes`), and open each PR with a "where to look" guide.
-- **P3 Delete merged branches** on GitHub: the branch of every merged PR (#4 to #18) and `corpus/realworld-runner` (closed #3, kept as a backup). Ask first.
+- **P3 Delete merged branches** on GitHub: the branch of every merged PR (#4 to #21; they were squash-merged, so `git branch --merged` does not show them; three local branches were never pushed: `ci/bump-pinned-scanner`, `docs/record-branch-protection`, `tamper-vendored-codeowners`) and `corpus/realworld-runner` (closed #3, kept as a backup). Ask first.
 - **P2 Fresh real-world sample** after the next rule fixes (the current one is no longer independent for tuned rules).
 - **P2 Visual check of the Checks tab.** Only the API was read. Confirm the summary renders, the `<!-- x -->` annotation path shows as text, and `neutral` (WARN) and `action_required` (INCOMPLETE) look right.
 - **P2 Confirm the conclusion mapping:** WARN is `neutral` (passes required checks), INCOMPLETE is `action_required`, BLOCK and ERROR are `failure`.
@@ -179,4 +179,4 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/python -m pr_scanner.corpus corpus                # in-repo corpus metrics
 .venv/bin/python -m pr_scanner.corpus corpus_real           # real-attack corpus (do not tune on it)
 ```
-Suggested order: (1) merge the open pin-bump and copyright PRs if they are still open, and check the next scan log installs the new pin; (2) make `tests` a required check (ask first); (3) `SCANNER-TAMPER` on vendored CODEOWNERS; (4) `CI-UNPINNED` noise on tag-pinned actions; (5) the two recall gaps (binary changes, new dependencies); (6) the 5 MiB cap and bundle INCOMPLETEs, and record why a scan is incomplete; (7) a fresh sample after those fixes. Owner items: the original incident's details, the fork red-team (including the split-across-3-PRs test), deleting merged branches, and verifying the Actions policy on the first PR scan after 2026-12-02.
+Suggested order: (1) done (pin bump #19 and copyright #20 merged); (2) make `tests` a required check (ask first); (3) push and merge `tamper-vendored-codeowners` (the vendored CODEOWNERS fix, local only so far) and update `docs/rules.md` with it; (4) `CI-UNPINNED` noise on tag-pinned actions; (5) the two recall gaps (binary changes, new dependencies); (6) the 5 MiB cap and bundle INCOMPLETEs, and record why a scan is incomplete; (7) a fresh sample after those fixes. Owner items: the original incident's details, the fork red-team (including the split-across-3-PRs test), deleting merged branches, and verifying the Actions policy on the first PR scan after 2026-12-02.
