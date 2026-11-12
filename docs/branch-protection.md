@@ -56,6 +56,10 @@ Read it back with `gh api repos/OWNER/REPO/branches/main/protection`. The requir
 repositories that run `.github/workflows/pr-scan.yml`, and a pull request must have run it once for the name
 to appear in the UI picker (the API accepts the name regardless).
 
+## Actions policy for `pull_request_target`
+
+GitHub blocks `pull_request_target` in public repositories by default from **2026-12-02**. A brownout on 2026-11-09 made scans fail at startup (`startup_failure`; such runs cannot be re-run, only a new push or reopen starts one). This repository has an Actions policy (Settings > Actions > Policies, id 12534) that allows only `pull_request_target`, only for `.github/workflows/pr-scan.yml`. Every repository that copies the workflow needs the same policy. **Not yet confirmed** that the path format matches and that it suppresses the default block: check the first PR scan after 2026-12-02.
+
 ## Known limits
 
 * Until a suppression flow (FR-11) exists, every legitimate edit to the scanner workflow, `.pr-scanner.yml`
