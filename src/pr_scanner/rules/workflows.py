@@ -15,6 +15,7 @@ from __future__ import annotations
 import posixpath
 import re
 from bisect import bisect_right
+from collections import Counter
 from typing import Iterator, Sequence
 
 from ..classify import FileKind, classify
@@ -174,6 +175,24 @@ _BRANCHY = re.compile(r"(?:main|master|trunk|dev|develop|development|head|latest
 _FIRST_PARTY = {"actions", "github"}
 
 
+def _tag_pinned_before(f: ChangedFile) -> Counter[str]:
+    """Actions the file referenced by a plain tag before this change, one count per removed line.
+
+    Only real third-party-style references count: not a full SHA, not a branch, not Docker, not a
+    local action, not a comment. Names are compared case-insensitively, subpath included."""
+    before: Counter[str] = Counter()
+    for _, t in f.removed_lines:
+        if _is_comment(t):
+            continue
+        m = _USES.match(cap(t))
+        if not m or m.group(1).startswith(("./", "../", "docker://")):
+            continue
+        name, _, ref = m.group(1).rpartition("@")
+        if name and not _FULL_SHA.fullmatch(ref) and not _BRANCHY.fullmatch(ref):
+            before[name.lower()] += 1
+    return before
+
+
 class ActionPinning(Rule):
     id = "CI-UNPINNED"
     version = "1"
@@ -183,6 +202,7 @@ class ActionPinning(Rule):
     def evaluate(self, diff: Diff) -> Sequence[Finding]:
         out: list[Finding] = []
         for f in _eligible(diff, _is_github_workflow):
+            bumpable = _tag_pinned_before(f)
             for n, t in _added(f):
                 m = _USES.match(cap(t))
                 if not m:
@@ -205,6 +225,11 @@ class ActionPinning(Rule):
                         sev, what = Severity.HIGH, f"the mutable branch '{ref}'"
                     elif owner in _FIRST_PARTY:
                         sev, what = Severity.LOW, f"the tag '{ref}' of a first-party action"
+                    elif bumpable[name.lower()] > 0:
+                        # A new tag of an action this file already trusted by tag: no new risk. Each
+                        # removed line excuses one added line, so it cannot launder several.
+                        bumpable[name.lower()] -= 1
+                        sev, what = Severity.LOW, f"the tag '{ref}' of an action this file already referenced by tag"
                     else:
                         sev, what = Severity.MEDIUM, f"the tag or short reference '{ref}'"
                 out.append(_finding(

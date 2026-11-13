@@ -100,6 +100,7 @@ Known limits: same file only; added lines only; payloads in binary files or tarb
 | `CI-UNPINNED` | High | action referenced by a branch (`@main`, `@master`, `@develop`, `@latest`, ...) |
 | | Medium | third-party action by tag or short SHA, or a Docker image tag |
 | | Low | first-party (`actions/*`, `github/*`) by tag |
+| | Low | a new tag of an action the same file referenced by tag before (removed line, same action name and subpath, case-insensitive): a version bump adds no new trust. Each removed line excuses one added line. Not excused: a former SHA pin, a branch (either side), a different action or subpath, a Docker tag, a commented removed line |
 | | none | full 40/64-hex SHA, local `./` action, Docker digest |
 | `CI-PERMS` | High | `permissions: write-all` |
 | | Medium | `write` on `contents`, `actions`, `id-token`, `packages`, `security-events`, `deployments` |
