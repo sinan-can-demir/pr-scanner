@@ -11,12 +11,12 @@ included), and the scan result itself cannot be faked by another app.
 | Require a pull request before merging | on, **0 approvals** | every change goes through a PR and its scan; see "Why 0 approvals" |
 | Require review from Code Owners | off while solo | the only code owner is the author, who cannot approve their own PR |
 | Dismiss stale approvals on new commits | on | takes effect once approvals are required again (T-S13) |
-| Require status checks | `PR scanner`, **pinned to the GitHub Actions app (id 15368)** | another app or a hand-made status cannot satisfy it |
+| Require status checks | `PR scanner` and `tests`, **both pinned to the GitHub Actions app (id 15368)** | another app or a hand-made status cannot satisfy it |
 | Require branches to be up to date | off | avoids needless re-scans for a small project |
 | Block force pushes, block deletion | on | history cannot be rewritten to hide a change |
 | Include administrators (`enforce_admins`) | **on** | nobody, the owner included, can merge past the scan |
 
-Only **"PR scanner"** should be required. The job-level checks `scan` and `report` also appear on each PR
+Only **"PR scanner"** and **"tests"** should be required. `tests` is the job in `.github/workflows/tests.yml`, which runs on every pull request (no path filters), so it cannot hang a PR; if that workflow ever gets path filters, a skipped required check would block merging. The job-level checks `scan` and `report` also appear on each PR
 and are implementation details.
 
 ## Why 0 approvals while solo
@@ -38,7 +38,7 @@ When a second maintainer exists: set approvals to 1, turn Code Owner review back
 ```bash
 gh api -X PUT repos/OWNER/REPO/branches/main/protection --input - <<'JSON'
 {
-  "required_status_checks": {"strict": false, "checks": [{"context": "PR scanner", "app_id": 15368}]},
+  "required_status_checks": {"strict": false, "checks": [{"context": "PR scanner", "app_id": 15368}, {"context": "tests", "app_id": 15368}]},
   "enforce_admins": true,
   "required_pull_request_reviews": {
     "required_approving_review_count": 0,
