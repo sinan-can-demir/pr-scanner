@@ -183,6 +183,72 @@ def test_unpinned_rule_ignores_non_workflow_files():
     assert uses("- uses: a/b@main", path="README.md") == []
 
 
+def bump(added, removed, **kw):
+    """A workflow edit that adds `added` lines and removes `removed` lines."""
+    return ChangedFile(
+        path=WF,
+        status="modified",
+        added_lines=tuple(enumerate(added, 1)),
+        removed_lines=tuple(enumerate(removed, 1)),
+        **kw,
+    )
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ("- uses: pypa/cibuildwheel@v2.21.1", "- uses: pypa/cibuildwheel@v2.22.0"),
+        ("- uses: docker/setup-qemu-action@v3", "- uses: docker/setup-qemu-action@v4"),
+        ("      uses: docker/setup-qemu-action@v3  # old", "      uses: docker/setup-qemu-action@v4"),
+        ("- uses: Pypa/CIBuildWheel@v2", "- uses: pypa/cibuildwheel@v3"),
+        ("- uses: o/r/sub/path@v1", "- uses: o/r/sub/path@v2"),
+    ],
+)
+def test_tag_bump_of_an_action_already_used_by_tag_is_low(old, new):
+    (f,) = run(ActionPinning, bump([new], [old]))
+    assert f.severity == Severity.LOW
+
+
+@pytest.mark.parametrize(
+    "old,new,sev",
+    [
+        # was SHA-pinned, now a tag: pinning was given up
+        (f"- uses: o/r@{SHA}", "- uses: o/r@v2", Severity.MEDIUM),
+        (f"- uses: o/r@{SHA}  # v1", "- uses: o/r@v2", Severity.MEDIUM),
+        # a different action, a different subpath, or a different owner is not a bump
+        ("- uses: o/other@v1", "- uses: o/r@v2", Severity.MEDIUM),
+        ("- uses: o/r/a@v1", "- uses: o/r/b@v2", Severity.MEDIUM),
+        ("- uses: o/r@v1", "- uses: o2/r@v2", Severity.MEDIUM),
+        # a branch is never excused, in either direction
+        ("- uses: o/r@v1", "- uses: o/r@main", Severity.HIGH),
+        ("- uses: o/r@main", "- uses: o/r@dev", Severity.HIGH),
+        ("- uses: o/r@main", "- uses: o/r@v2", Severity.MEDIUM),
+        # a removed line that is only a comment or not a uses line proves nothing
+        ("# - uses: o/r@v1", "- uses: o/r@v2", Severity.MEDIUM),
+        ("- run: echo uses: o/r@v1", "- uses: o/r@v2", Severity.MEDIUM),
+        # Docker image tags are not covered
+        ("- uses: docker://alpine:3.18", "- uses: docker://alpine:3.19", Severity.MEDIUM),
+    ],
+)
+def test_bump_exemption_is_narrow(old, new, sev):
+    (f,) = run(ActionPinning, bump([new], [old]))
+    assert f.severity == sev
+
+
+def test_one_removed_line_excuses_only_one_added_line():
+    fs = run(
+        ActionPinning,
+        bump(["- uses: o/r@v2", "- uses: o/r@v2", "- uses: o/r@v2"], ["- uses: o/r@v1"]),
+    )
+    assert sorted(f.severity for f in fs) == [Severity.LOW, Severity.MEDIUM, Severity.MEDIUM]
+
+
+def test_removed_lines_of_another_file_do_not_excuse_this_one():
+    other = ChangedFile(path=".github/workflows/other.yml", status="modified", removed_lines=((1, "- uses: o/r@v1"),))
+    (f,) = run(ActionPinning, bump(["- uses: o/r@v2"], []), other)
+    assert f.severity == Severity.MEDIUM
+
+
 # ========================================================= CI-PERMS
 
 
