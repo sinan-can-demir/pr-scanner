@@ -15,7 +15,7 @@ Runs end to end as a GitHub Action: live on this repository, rehearsed on a thro
 | Real-attack corpus | `corpus_real/`: 8 defanged cases from documented incidents (xz, event-stream, tj-actions, nx, Shai-Hulud). First run caught **4 of 8**; `EXEC-OBFUSCATED` then caught 2 of the 4 misses, but it was written looking at them, so that is not independent evidence. The other 2 (binary test files, an added dependency) are outside what a diff-text scanner sees. See `docs/recall-real-attacks.md`. |
 | Fetcher | Done, GET-only. Exercised on four real samples (800, 684, 543 and 300 PRs). |
 | Reporter, `report_io`, `publisher`, `cli` | Done. Escaping verified against GitHub's real renderer. Trust model in ADR-0005. |
-| Action workflow | `.github/workflows/pr-scan.yml`: `pull_request_target`, two jobs, scanner pinned by SHA (currently `774145e`, main after #18: includes `EXEC-OBFUSCATED` and the `EXEC-DROPPER`, `CI-SECRETS` and `CI-INJECT` false-positive fixes). 18 property tests guard it. |
+| Action workflow | `.github/workflows/pr-scan.yml`: `pull_request_target`, two jobs, scanner pinned by SHA (currently `cd0ec39`, main after #27: includes the SCANNER-TAMPER vendored-CODEOWNERS fix and `EXEC-OBFUSCATED` and the `EXEC-DROPPER`, `CI-SECRETS` and `CI-INJECT` false-positive fixes). 18 property tests guard it. |
 | Protection of this repo | Branch protection and CODEOWNERS applied (`docs/branch-protection.md`). Since 2026-11-09: 0 approvals, `PR scanner` required, **enforced on admins**, so no merge skips the scan. |
 | Real-world runner | `python -m pr_scanner.realworld`, plus data in `realworld/`. |
 | CI | `.github/workflows/tests.yml` runs the default suite on every PR and push to `main`, `pytest -m perf` weekly and on demand. Packages pinned by hash. 12 property tests guard it. **Not yet a required check.** |
@@ -26,7 +26,7 @@ Runs end to end as a GitHub Action: live on this repository, rehearsed on a thro
 - **Fetcher and engine** on 800 recent merged PRs from 32 public repos (14,421 files, 0 fetch errors).
 - **Reporter** against GitHub's Markdown renderer (mentions, links, issue and commit references, HTML and hidden characters all inert after one fix) and a real check run with 27 annotations.
 - **Action** in GitHub Actions on a fork (benign PASS, malicious BLOCK, workflow-tamper BLOCK after `SCANNER-TAMPER`) and on this repo (PR #1 and #2 passed the scan and were held by the code-owner gate).
-- **Pinned scanner:** the live scan installs the pinned SHA (first read in the Actions log on 2026-11-11 as `pr-scanner@6adbd9c...`; the pin has since moved to `774145e` in #19).
+- **Pinned scanner:** the live scan installs the pinned SHA (first read in the Actions log on 2026-11-11 as `pr-scanner@6adbd9c...`; the pin has since moved to `774145e` in #19, then to `cd0ec39`).
 - **Trust claim:** a PR that rewrites the scan step cannot disable the scan; the base-branch workflow ran and the forged step never did.
 
 ## Real-world measurement (800 PRs, scanner at `3a676cf`; historical, the false positives named here are since fixed)
