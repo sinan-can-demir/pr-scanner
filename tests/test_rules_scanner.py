@@ -241,6 +241,29 @@ def test_codeowners_edit_is_medium_and_deletion_is_high(path):
     assert top(run(cf(path=path, status="removed", removed=["* @owner"]))) is Severity.HIGH
 
 
+@pytest.mark.parametrize("path", [
+    "vendor/lib/CODEOWNERS", "third_party/x/.github/CODEOWNERS", "src/docs/CODEOWNERS", "sub/CODEOWNERS",
+    "node_modules/pkg/CODEOWNERS",
+])
+def test_codeowners_outside_the_three_locations_github_reads_is_ignored(path):
+    # GitHub only reads CODEOWNERS at the root, in .github/ and in docs/ (found as a false positive in buildkit).
+    assert run(cf(path=path, added=["* @someone"])) == []
+    assert run(cf(path=path, status="removed", removed=["* @owner"])) == []
+
+
+def test_codeowners_location_match_ignores_case_and_backslashes():
+    assert top(run(cf(path=".GITHUB/codeowners", added=["x @y"]))) is Severity.MEDIUM
+    assert top(run(cf(path="DOCS/CODEOWNERS", added=["x @y"]))) is Severity.MEDIUM
+
+
+def test_moving_codeowners_out_of_the_effective_locations_is_high():
+    # The file stops being read, so this removes protection just as a deletion does.
+    f = run(cf(path="vendor/CODEOWNERS", old_path=".github/CODEOWNERS", status="renamed"))
+    assert top(f) is Severity.HIGH
+    assert top(run(cf(path="CODEOWNERS", old_path="vendor/CODEOWNERS", status="renamed", added=["x @y"]))) is Severity.MEDIUM
+    assert run(cf(path="vendor/b/CODEOWNERS", old_path="vendor/a/CODEOWNERS", status="renamed")) == []
+
+
 def test_removing_ownership_of_workflows_from_codeowners_is_high():
     f = run(cf(path=".github/CODEOWNERS", removed=["/.github/workflows/ @maintainers"], added=["docs/ @x"]))
     assert top(f) is Severity.HIGH
