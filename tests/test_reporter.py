@@ -289,9 +289,43 @@ def test_title_is_short_and_free_of_pr_text():
 
 
 def _strip_code_spans(text: str) -> str:
-    """Remove `code spans` and fenced blocks, leaving only text GitHub would interpret."""
-    text = re.sub(r"(`+)(?:(?!\1).)+?\1", "", text, flags=re.S)
-    return text
+    """Remove `code spans`, leaving only text GitHub would interpret.
+
+    CommonMark: outside a span, a backslash escapes the first backtick of a run (it is literal, not
+    an opener); a run of N backticks opens a span that only a run of exactly N closes."""
+    out: list[str] = []
+    pos = 0
+    runs = list(re.finditer(r"`+", text))
+    i = 0
+    while i < len(runs):
+        m = runs[i]
+        n = len(m.group(0))
+        start = m.start()
+        backslashes = len(text[:start]) - len(text[:start].rstrip("\\"))
+        if backslashes % 2 == 1:
+            n -= 1
+            start += 1
+        if n == 0:
+            i += 1
+            continue
+        close = next((j for j in range(i + 1, len(runs)) if len(runs[j].group(0)) == n), None)
+        if close is None:  # unclosed: the backticks are literal text
+            i += 1
+            continue
+        out.append(text[pos:start])
+        pos = runs[close].end()
+        i = close + 1
+    out.append(text[pos:])
+    return "".join(out)
+
+
+def test_strip_code_spans_honours_escaped_backticks():
+    # Found by the property test: an escaped backtick is literal and must not pair with a real fence.
+    text = "- \\`\n\n- ` TEST-001 ` in ` <A `"
+    assert "<A" not in _strip_code_spans(text)
+    assert _strip_code_spans("a `x` b") == "a  b"
+    assert _strip_code_spans("a ``x ` y`` b") == "a  b"
+    assert _strip_code_spans("lone ` <A") == "lone ` <A"  # unclosed: literal, still visible
 
 
 _OWN_HEADINGS = {"## Verdict", "## Findings", "## Scan problems", "## About this report"}
