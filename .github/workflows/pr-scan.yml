@@ -40,7 +40,7 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/scanner"
           "$RUNNER_TEMP/scanner/bin/pip" install --no-cache-dir --disable-pip-version-check \
-            "git+https://github.com/sinan-can-demir/pr-scanner@cd0ec39db4fa2031d62b3a1a67778f0bb1f75725"
+            "git+https://github.com/sinan-can-demir/pr-scanner@0f862c964c5489a40ebfd6c5eba1752859e715d9"
 
       - name: Scan the pull request through the API (read-only, nothing is executed)
         env:
@@ -75,7 +75,7 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/scanner"
           "$RUNNER_TEMP/scanner/bin/pip" install --no-cache-dir --disable-pip-version-check \
-            "git+https://github.com/sinan-can-demir/pr-scanner@cd0ec39db4fa2031d62b3a1a67778f0bb1f75725"
+            "git+https://github.com/sinan-can-demir/pr-scanner@0f862c964c5489a40ebfd6c5eba1752859e715d9"
 
       - name: Fetch the report (a missing report becomes a failing check below)
         continue-on-error: true
